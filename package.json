@@ -1,0 +1,18 @@
+{
+  "name": "owpl-core",
+  "version": "1.0.0",
+  "description": "OWPL API Core",
+  "main": "main.js",
+  "scripts": {
+    "nodemon": "nodemon main.js",
+    "start": "node main.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcrypt": "^5.1.0",
+    "express": "^4.18.2",
+    "mongoose": "^6.8.3",
+    "nodemon": "^2.0.20"
+  }
+}

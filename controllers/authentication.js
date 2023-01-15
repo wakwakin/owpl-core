@@ -1,0 +1,245 @@
+const express = require('express')
+const bcrypt = require('bcrypt')
+const Router = express.Router()
+
+const vars = require('../const')
+// Models
+const Employee = require('../models/employee')
+const Role = require('../models/role')
+
+Router.get('/login', (req, res) => {
+    res.send('success')
+})
+
+Router.get('/employee', (req, res) => {
+    let page = req.params.page >= 1 ? parseInt(req.params.page) - 1 : 0
+    Employee.find()
+    .limit(vars.DATA_LIMIT)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+        if (result) {
+            return res.status(200).send({
+                data: result,
+                total: await Employee.countDocuments(),
+                success: true,
+                message: 'Fetched employees'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'No employee'
+        })
+    })
+})
+
+Router.post('/employee', (req, res) => {
+    Role.findById(req.body.roleId).then((result) => {
+        let newRole = result.roleName
+        Employee.findOneAndUpdate({
+            username: req.body.username
+        }, {
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            roleId: req.body.roleId,
+            roleName: newRole
+        }).then((result) => {
+            if (result) {
+                return res.status(200).send({
+                    data: {
+                        username: req.body.username,
+                        firstName: req.body.firstName,
+                        lastName: req.body.lastName,
+                        roleName: newRole
+                    },
+                    success: true,
+                    message: 'Successfully updated employee'
+                })
+            }
+
+            return res.status(400).send({
+                data: {},
+                success: false,
+                message: 'Username does not exist'
+            })
+        })
+    }).catch((err) => {
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Role does not exist'
+        })
+    })
+})
+
+Router.put('/employee', (req, res) => {
+    bcrypt.hash(req.body.password, vars.SALT, async (err, hash) => {
+        if (err) {
+            return res.status(404).send({
+                data: {},
+                success: false,
+                message: 'Password is blank'
+            })
+        }
+
+        const data = {
+            firstName: req.body.firstName,
+            lastName: req.body.lastName,
+            username: req.body.username,
+            password: hash,
+            roleId: req.body.roleId,
+            roleName: req.body.roleName
+        }
+
+        const employee = new Employee(data)
+    
+        await employee.save().then(() => {
+            res.status(200).send({
+                data: {
+                    id: employee._id.toString()
+                },
+                success: true,
+                message: 'Created a new employee'
+            })
+        }).catch(() => {
+            return res.status(400).send({
+                data: {},
+                success: false,
+                message: 'Username already exist'
+            })
+        })
+    })
+})
+
+Router.delete('/employee', (req, res) => {
+    Employee.findOneAndDelete({ username: req.body.username }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    username: req.body.username
+                },
+                success: true,
+                message: 'Deleted an employee'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Username does not exist'
+        })
+    })
+})
+
+Router.get('/role', (req, res) => {
+    let page = req.params.page >= 1 ? parseInt(req.params.page) - 1 : 0
+    Role.find()
+    .limit(vars.DATA_LIMIT)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+        if (result) {
+            let rolePermission = []
+            result.map((role) => {
+                let newPermission = []
+                let permission = role.rolePermission.split(':')
+                permission.map((module) => {
+                    let access = module.split('|')
+                    newPermission.push({
+                        moduleName: access[0],
+                        modulePermission: access[1]
+                    })
+                })
+                rolePermission.push({
+                    id: role._id.toString(),
+                    roleName: role.roleName,
+                    rolePermission: newPermission
+                })
+            })
+
+            return res.status(200).send({
+                data: rolePermission,
+                total: await Role.countDocuments(),
+                success: true,
+                message: 'Fetched roles'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'No roles'
+        })
+    })
+})
+
+Router.post('/role', (req, res) => {
+    Role.findOneAndUpdate({
+        _id: req.body.roleId
+    }, {
+        roleName: req.body.roleName,
+        rolePermission: req.body.rolePermission
+    }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    roleName: req.body.roleName,
+                    rolePermission: req.body.rolePermission
+                },
+                success: true,
+                message: 'Successfully updated role'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Role does not exist'
+        })
+    })
+})
+
+Router.put('/role', async (req, res) => {
+    const data = {
+        roleName: req.body.roleName,
+        rolePermission: req.body.rolePermission
+    }
+
+    const role = new Role(data)
+
+    await role.save().then((asd) => {
+        res.status(200).send({
+            data: role._id.toString(),
+            success: true,
+            message: 'Created a new role'
+        })
+    }).catch(() => {
+        res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Role already exist'
+        })
+    })
+})
+
+Router.delete('/role', (req, res) => {
+    Role.findOneAndDelete({ _id: req.body.roleId }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    roleId: req.body.roleId
+                },
+                success: true,
+                message: 'Deleted a role'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Role does not exist'
+        })
+    })
+})
+
+module.exports = Router
