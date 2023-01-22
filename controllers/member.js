@@ -5,6 +5,7 @@ const vars = require('../const')
 // Models
 const Member = require('../models/member')
 const Payment = require('../models/member-payment')
+const Saving = require('../models/saving')
 
 Router.get('/member', (req, res) => {
     let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
@@ -40,6 +41,7 @@ Router.post('/member', (req, res) => {
         lastPaymentAmount: req.body.lastPaymentAmount,
         releaseDate: req.body.releaseDate,
         releaseAmount: req.body.releaseAmount,
+        savings: req.body.savings,
         cycles: req.body.cycles,
     }).then((result) => {
         if (result) {
@@ -53,6 +55,7 @@ Router.post('/member', (req, res) => {
                     lastPaymentAmount: req.body.lastPaymentAmount,
                     releaseDate: req.body.releaseDate,
                     releaseAmount: req.body.releaseAmount,
+                    savings: req.body.savings,
                     cycles: req.body.cycles
                 },
                 success: true,
@@ -77,6 +80,7 @@ Router.put('/member', async (req, res) => {
         lastPaymentAmount: req.body.lastPaymentAmount,
         releaseDate: req.body.releaseDate,
         releaseAmount: req.body.releaseAmount,
+        savings: req.body.savings,
         cycles: req.body.cycles,
     }
 
@@ -143,6 +147,7 @@ Router.get('/payment', (req, res) => {
 })
 
 Router.post('/payment', (req, res) => {
+    console.log(req.body.paymentId)
     Payment.findOneAndUpdate({
         _id: req.body.paymentId
     }, {
@@ -213,6 +218,104 @@ Router.delete('/payment', (req, res) => {
             data: {},
             success: false,
             message: 'Payment does not exist'
+        })
+    })
+})
+
+Router.get('/saving', (req, res) => {
+    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    Saving.find({ memberId: req.query.id })
+    .limit(vars.DATA_LIMIT)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+        if (result) {
+            return res.send({
+                data: result,
+                total: await Saving.find({ memberId: req.query.id }).countDocuments(),
+                success: true,
+                message: 'Fetched member savings'
+            })
+        }
+
+        return res.send({
+            data: {},
+            success: false,
+            message: 'Member id does not exist'
+        })
+    })
+})
+
+Router.post('/saving', (req, res) => {
+    Saving.findOneAndUpdate({
+        _id: req.body.savingId
+    }, {
+        paymentDate: req.body.paymentDate,
+        paymentAmount: req.body.paymentAmount
+    }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    savingId: req.body.savingId,
+                    paymentDate: req.body.paymentDate,
+                    paymentAmount: req.body.paymentAmount
+                },
+                success: true,
+                message: 'Successfully updated savings'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Savings id does not exist'
+        })
+    })
+})
+
+Router.put('/saving', (req, res) => {
+    Member.findById({ _id: req.body.memberId }).then(async (result) => {
+        const data = {
+            memberId: req.body.memberId,
+            paymentDate: req.body.paymentDate,
+            paymentAmount: req.body.paymentAmount
+        }
+    
+        const saving = new Saving(data)
+    
+        await saving.save().then(() => {
+            return res.status(200).send({
+                data: {
+                    id: saving._id.toString()
+                },
+                success: true,
+                message: 'Created a new savings'
+            })
+        })
+    }).catch(() => {
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Member does not exist'
+        })
+    })
+})
+
+Router.delete('/saving', (req, res) => {
+    Saving.findOneAndDelete({ _id: req.body.savingId }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    savingId: req.body.savingId
+                },
+                success: true,
+                message: 'Deleted a savings'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Savings does not exist'
         })
     })
 })

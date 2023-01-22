@@ -8,6 +8,7 @@ const schema = new mongoose.Schema({
     lastPaymentAmount: { type: String },
     releaseDate: { type: String },
     releaseAmount: { type: Number },
+    savings: { type: Number },
     cycles: { type: Number },
 })
 
