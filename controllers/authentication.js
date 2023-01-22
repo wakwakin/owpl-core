@@ -7,12 +7,61 @@ const vars = require('../const')
 const Employee = require('../models/employee')
 const Role = require('../models/role')
 
-Router.get('/login', (req, res) => {
-    res.send('success')
+Router.post('/login', (req, res) => {
+    Employee.findOne({ username: req.body.username }).then((result) => {
+        if (result) {
+            return bcrypt.compare(req.body.password, result.password).then((isPasswordMatch) => {
+                if (isPasswordMatch) {
+                    return Role.findOne({ _id: result.roleId}).then((role) => {
+                        let newPermission = []
+                        let permission = role.rolePermission.split(':')
+                        permission.map((module) => {
+                            let access = module.split('|')
+                            newPermission.push({
+                                moduleName: access[0],
+                                modulePermission: access[1]
+                            })
+                        })
+
+                        result.rolePermission = newPermission
+                        result.password = ''
+
+                        console.log(result)
+                        return res.send({
+                            data: result,
+                            success: true,
+                            message: 'Logged in'
+                        })
+                    })
+                }
+
+                return res.send({
+                    data: {},
+                    success: false,
+                    message: 'Password is wrong'
+                })
+            })
+            
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Username does not exist'
+        })
+    })
+})
+
+Router.post('/logout', (req, res) => {
+    res.status(200).send({
+        data: {},
+        success: true,
+        message: 'Logged out'
+    })
 })
 
 Router.get('/employee', (req, res) => {
-    let page = req.params.page >= 1 ? parseInt(req.params.page) - 1 : 0
+    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
     Employee.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
@@ -89,7 +138,8 @@ Router.put('/employee', (req, res) => {
             username: req.body.username,
             password: hash,
             roleId: req.body.roleId,
-            roleName: req.body.roleName
+            roleName: req.body.roleName,
+            rolePermission: ''
         }
 
         const employee = new Employee(data)
@@ -133,7 +183,7 @@ Router.delete('/employee', (req, res) => {
 })
 
 Router.get('/role', (req, res) => {
-    let page = req.params.page >= 1 ? parseInt(req.params.page) - 1 : 0
+    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
     Role.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)

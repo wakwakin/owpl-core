@@ -6,7 +6,8 @@ const schema = new mongoose.Schema({
     username: { type: String, unique: true },
     password: { type: String },
     roleId: { type: String },
-    roleName: { type: String }
+    roleName: { type: String },
+    rolePermission: [{}]
 })
 
 module.exports = mongoose.model('Employee', schema)
