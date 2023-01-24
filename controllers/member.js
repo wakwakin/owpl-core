@@ -7,6 +7,7 @@ const Member = require('../models/member')
 const Payment = require('../models/member-payment')
 const Saving = require('../models/saving')
 const Release = require('../models/release')
+const Center = require('../models/center')
 
 Router.get('/member', (req, res) => {
     let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
@@ -44,6 +45,7 @@ Router.post('/member', (req, res) => {
         releaseAmount: req.body.releaseAmount,
         savings: req.body.savings,
         cycles: req.body.cycles,
+        centerId: req.body.centerId,
     }).then((result) => {
         if (result) {
             return res.status(200).send({
@@ -57,7 +59,8 @@ Router.post('/member', (req, res) => {
                     releaseDate: req.body.releaseDate,
                     releaseAmount: req.body.releaseAmount,
                     savings: req.body.savings,
-                    cycles: req.body.cycles
+                    cycles: req.body.cycles,
+                    centerId: req.body.centerId,
                 },
                 success: true,
                 message: 'Successfully updated member'
@@ -83,6 +86,7 @@ Router.put('/member', async (req, res) => {
         releaseAmount: req.body.releaseAmount,
         savings: req.body.savings,
         cycles: req.body.cycles,
+        centerId: req.body.centerId,
     }
 
     const member = new Member(data)
@@ -148,7 +152,6 @@ Router.get('/payment', (req, res) => {
 })
 
 Router.post('/payment', (req, res) => {
-    console.log(req.body.paymentId)
     Payment.findOneAndUpdate({
         _id: req.body.paymentId
     }, {
@@ -419,6 +422,95 @@ Router.delete('/release', (req, res) => {
             data: {},
             success: false,
             message: 'Release does not exist'
+        })
+    })
+})
+
+Router.get('/center', (req, res) => {
+    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    Center.find()
+    .limit(vars.DATA_LIMIT)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+        if (result) {
+            return res.send({
+                data: result,
+                total: await Center.find().countDocuments(),
+                success: true,
+                message: 'Fetched centers'
+            })
+        }
+
+        return res.send({
+            data: {},
+            success: false,
+            message: 'No centers'
+        })
+    })
+})
+
+Router.post('/center', (req, res) => {
+    Center.findOneAndUpdate({
+        _id: req.body.centerId
+    }, {
+        centerName: req.body.centerName,
+        centerLeader: req.body.centerLeader
+    }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    centerId: req.body.centerId,
+                    centerName: req.body.centerName,
+                    centerLeader: req.body.centerLeader
+                },
+                success: true,
+                message: 'Successfully updated center'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Center id does not exist'
+        })
+    })
+})
+
+Router.put('/center', async (req, res) => {
+    const data = {
+        centerName: req.body.centerName,
+        centerLeader: req.body.centerLeader
+    }
+
+    const center = new Center(data)
+
+    await center.save().then(() => {
+        return res.status(200).send({
+            data: {
+                id: center._id.toString()
+            },
+            success: true,
+            message: 'Created a new center'
+        })
+    })
+})
+
+Router.delete('/center', (req, res) => {
+    Center.findOneAndDelete({ _id: req.body.centerId }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    centerId: req.body.centerId
+                },
+                success: true,
+                message: 'Deleted a center'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Center does not exist'
         })
     })
 })

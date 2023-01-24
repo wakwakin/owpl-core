@@ -26,7 +26,6 @@ Router.post('/login', (req, res) => {
                         result.rolePermission = newPermission
                         result.password = ''
 
-                        console.log(result)
                         return res.send({
                             data: result,
                             success: true,

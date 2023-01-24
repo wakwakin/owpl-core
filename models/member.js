@@ -10,6 +10,7 @@ const schema = new mongoose.Schema({
     releaseAmount: { type: Number },
     savings: { type: Number },
     cycles: { type: Number },
+    centerId: { type: String }
 })
 
 module.exports = mongoose.model('Member', schema)
