@@ -6,6 +6,7 @@ const vars = require('../const')
 const Member = require('../models/member')
 const Payment = require('../models/member-payment')
 const Saving = require('../models/saving')
+const Release = require('../models/release')
 
 Router.get('/member', (req, res) => {
     let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
@@ -316,6 +317,108 @@ Router.delete('/saving', (req, res) => {
             data: {},
             success: false,
             message: 'Savings does not exist'
+        })
+    })
+})
+
+Router.get('/release', (req, res) => {
+    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    Release.find()
+    .limit(vars.DATA_LIMIT)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+        if (result) {
+            return res.send({
+                data: result,
+                total: await Release.find().countDocuments(),
+                success: true,
+                message: 'Fetched releases'
+            })
+        }
+
+        return res.send({
+            data: {},
+            success: false,
+            message: 'No releases'
+        })
+    })
+})
+
+Router.post('/release', (req, res) => {
+    Release.findOneAndUpdate({
+        _id: req.body.releaseId
+    }, {
+        nextPaymentDate: req.body.nextPaymentDate,
+        dailyPayment: req.body.dailyPayment
+    }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    releaseId: req.body.releaseId,
+                    nextPaymentDate: req.body.nextPaymentDate,
+                    dailyPayment: req.body.dailyPayment
+                },
+                success: true,
+                message: 'Successfully updated release'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Release id does not exist'
+        })
+    })
+})
+
+Router.put('/release', (req, res) => {
+    Member.findById({ _id: req.body.memberId }).then(async (result) => {
+        const data = {
+            memberId: req.body.memberId,
+            remainingBalance: req.body.remainingBalance,
+            releaseDate: req.body.releaseDate,
+            releaseAmount: req.body.releaseAmount,
+            releaseOutgoing: req.body.releaseOutgoing,
+            nextPaymentDate: req.body.nextPaymentDate,
+            dailyPayment: req.body.dailyPayment
+        }
+    
+        const release = new Release(data)
+    
+        await release.save().then(() => {
+            return res.status(200).send({
+                data: {
+                    id: release._id.toString()
+                },
+                success: true,
+                message: 'Created a new release'
+            })
+        })
+    }).catch(() => {
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Member does not exist'
+        })
+    })
+})
+
+Router.delete('/release', (req, res) => {
+    Release.findOneAndDelete({ _id: req.body.releaseId }).then((result) => {
+        if (result) {
+            return res.status(200).send({
+                data: {
+                    releaseId: req.body.releaseId
+                },
+                success: true,
+                message: 'Deleted a release'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'Release does not exist'
         })
     })
 })
