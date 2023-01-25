@@ -60,7 +60,7 @@ Router.post('/logout', (req, res) => {
 })
 
 Router.get('/employee', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     Employee.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
@@ -182,10 +182,11 @@ Router.delete('/employee', (req, res) => {
 })
 
 Router.get('/role', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let limit = req.query._page >= 1 ? vars.DATA_LIMIT : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     Role.find()
-    .limit(vars.DATA_LIMIT)
-    .skip(page * vars.DATA_LIMIT)
+    .limit(limit)
+    .skip(page * limit)
     .then(async (result) => {
         if (result) {
             let rolePermission = []
