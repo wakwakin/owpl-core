@@ -46,6 +46,7 @@ Router.post('/member', (req, res) => {
         savings: req.body.savings,
         cycles: req.body.cycles,
         centerId: req.body.centerId,
+        centerName: req.body.centerName
     }).then((result) => {
         if (result) {
             return res.status(200).send({
@@ -61,6 +62,7 @@ Router.post('/member', (req, res) => {
                     savings: req.body.savings,
                     cycles: req.body.cycles,
                     centerId: req.body.centerId,
+                    centerName: req.body.centerName
                 },
                 success: true,
                 message: 'Successfully updated member'
@@ -87,6 +89,7 @@ Router.put('/member', async (req, res) => {
         savings: req.body.savings,
         cycles: req.body.cycles,
         centerId: req.body.centerId,
+        centerName: req.body.centerName
     }
 
     const member = new Member(data)
