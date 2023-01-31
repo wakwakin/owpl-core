@@ -11,7 +11,8 @@ const schema = new mongoose.Schema({
     savings: { type: Number },
     cycles: { type: Number },
     centerId: { type: String },
-    centerName: { type: String }
+    centerName: { type: String },
+    balance: { type: Number }
 })
 
 module.exports = mongoose.model('Member', schema)

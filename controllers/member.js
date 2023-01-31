@@ -33,9 +33,8 @@ Router.get('/member', (req, res) => {
 })
 
 Router.post('/member', (req, res) => {
-    Member.findOneAndUpdate({
-        _id: req.body.memberId
-    }, {
+    let loanBalance = (parseFloat(req.body.releaseAmount) * .2) + (parseFloat(req.body.releaseAmount)) + (parseFloat(req.body.processingFee ? req.body.processingFee : 0))
+    let data = {
         memberName: req.body.memberName,
         lastReleaseDate: req.body.lastReleaseDate,
         lastReleaseAmount: req.body.lastReleaseAmount,
@@ -46,24 +45,30 @@ Router.post('/member', (req, res) => {
         savings: req.body.savings,
         cycles: req.body.cycles,
         centerId: req.body.centerId,
-        centerName: req.body.centerName
-    }).then((result) => {
+        centerName: req.body.centerName,
+        balance: loanBalance,
+    }
+    if (req.body.sameBalanceToggle) {
+        data = {
+            memberName: req.body.memberName,
+            lastReleaseDate: req.body.lastReleaseDate,
+            lastReleaseAmount: req.body.lastReleaseAmount,
+            lastPaymentDate: req.body.lastPaymentDate,
+            lastPaymentAmount: req.body.lastPaymentAmount,
+            releaseDate: req.body.releaseDate,
+            releaseAmount: req.body.releaseAmount,
+            savings: req.body.savings,
+            cycles: req.body.cycles,
+            centerId: req.body.centerId,
+            centerName: req.body.centerName,
+        }
+    }
+    Member.findOneAndUpdate({
+        _id: req.body.memberId
+    }, data).then((result) => {
         if (result) {
             return res.status(200).send({
-                data: {
-                    memberId: req.body.memberId,
-                    memberName: req.body.memberName,
-                    lastReleaseDate: req.body.lastReleaseDate,
-                    lastReleaseAmount: req.body.lastReleaseAmount,
-                    lastPaymentDate: req.body.lastPaymentDate,
-                    lastPaymentAmount: req.body.lastPaymentAmount,
-                    releaseDate: req.body.releaseDate,
-                    releaseAmount: req.body.releaseAmount,
-                    savings: req.body.savings,
-                    cycles: req.body.cycles,
-                    centerId: req.body.centerId,
-                    centerName: req.body.centerName
-                },
+                data,
                 success: true,
                 message: 'Successfully updated member'
             })
@@ -78,6 +83,7 @@ Router.post('/member', (req, res) => {
 })
 
 Router.put('/member', async (req, res) => {
+    let loanBalance = (parseFloat(req.body.releaseAmount) * .2) + (parseFloat(req.body.releaseAmount)) + (parseFloat(req.body.processingFee ? req.body.processingFee : 0))
     const data = {
         memberName: req.body.memberName,
         lastReleaseDate: req.body.lastReleaseDate,
@@ -89,7 +95,8 @@ Router.put('/member', async (req, res) => {
         savings: req.body.savings,
         cycles: req.body.cycles,
         centerId: req.body.centerId,
-        centerName: req.body.centerName
+        centerName: req.body.centerName,
+        balance: loanBalance
     }
 
     const member = new Member(data)
@@ -133,14 +140,15 @@ Router.delete('/member', (req, res) => {
 
 Router.get('/payment', (req, res) => {
     let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
-    Payment.find({ memberId: req.query.id })
+    let data = req.query.id ? { memberId: req.query.id } : {}
+    Payment.find(data)
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
             return res.send({
                 data: result,
-                total: await Payment.find({ memberId: req.query.id }).countDocuments(),
+                total: await Payment.find(data).countDocuments(),
                 success: true,
                 message: 'Fetched member payments'
             })
@@ -159,14 +167,18 @@ Router.post('/payment', (req, res) => {
         _id: req.body.paymentId
     }, {
         paymentDate: req.body.paymentDate,
-        paymentAmount: req.body.paymentAmount
+        paymentAmount: req.body.paymentAmount,
+        cycle: req.body.cycle,
+        balance: req.body.remainingBalance,
     }).then((result) => {
         if (result) {
             return res.status(200).send({
                 data: {
                     paymentId: req.body.paymentId,
                     paymentDate: req.body.paymentDate,
-                    paymentAmount: req.body.paymentAmount
+                    paymentAmount: req.body.paymentAmount,
+                    cycle: req.body.cycle,
+                    balance: req.body.remainingBalance,
                 },
                 success: true,
                 message: 'Successfully updated payment'
@@ -186,7 +198,9 @@ Router.put('/payment', (req, res) => {
         const data = {
             memberId: req.body.memberId,
             paymentDate: req.body.paymentDate,
-            paymentAmount: req.body.paymentAmount
+            paymentAmount: req.body.paymentAmount,
+            cycle: req.body.cycle,
+            balance: req.body.remainingBalance,
         }
     
         const payment = new Payment(data)
@@ -538,6 +552,45 @@ Router.delete('/center', (req, res) => {
             data: {},
             success: false,
             message: 'Center does not exist'
+        })
+    })
+})
+
+Router.get('/balance', (req, res) => {
+    Member.findOne({ _id: req.query.id }).then((member) => {
+        return res.send({
+            data: {
+                balance: member.balance
+            },
+            success: true,
+            message: 'Fetched member balance'
+        })
+    })
+})
+
+Router.put('/balance', (req, res) => {
+    Member.findOneAndUpdate(
+        {
+            _id: req.body.memberId
+        },
+        {
+            lastPaymentAmount:  parseFloat(req.body.paymentAmount),
+            lastPaymentDate: req.body.paymentDate,
+            balance: parseFloat(req.body.remainingBalance)
+        }
+    ).then((result) => {
+        if (result) {
+            return res.send({
+                data: result,
+                success: true,
+                message: "Updated balance"
+            })
+        }
+
+        return res.send({
+            data: {},
+            success: false,
+            message: 'Something went wrong'
         })
     })
 })
