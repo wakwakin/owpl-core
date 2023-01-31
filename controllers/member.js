@@ -429,6 +429,30 @@ Router.delete('/release', (req, res) => {
     })
 })
 
+Router.get('/center/fix', (req, res) => {
+    Member.find().then(async (result) => {
+        if (!result) return res.send({ data: {}, success: false, message: 'No members' })
+        
+        result.map((member) => {
+            let centerName = member.centerName
+            let centerId = member.centerId
+            let memberId = member._id.toString()
+            Center.find({ _id: centerId }).then((center) => {
+                let newCenterName = center[0].centerName
+                if (newCenterName != centerName) {
+                    Member.findOneAndUpdate({ _id: memberId }, { centerName: newCenterName}).then((result) => data.push(result))
+                }
+            })
+        })
+
+        return res.send({
+            data: {},
+            success: true,
+            message: 'Fixed center names'
+        })
+    })
+})
+
 Router.get('/center', (req, res) => {
     let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
     Center.find()
