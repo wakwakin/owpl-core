@@ -16,6 +16,16 @@ Router.get('/member', (req, res) => {
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
+            if (req.query._search) {
+                let search = req.query._search
+                result = result.filter(filter => {
+                    if (filter.memberName.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.centerName.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.cycles.toString().toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.balance.toString().toLowerCase().includes(search.toLowerCase())) return filter
+                })
+            }
+
             return res.status(200).send({
                 data: result,
                 total: await Member.countDocuments(),
