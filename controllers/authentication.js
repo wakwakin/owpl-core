@@ -1,4 +1,5 @@
 const express = require('express')
+const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 const Router = express.Router()
 
@@ -25,9 +26,12 @@ Router.post('/login', (req, res) => {
 
                         result.rolePermission = newPermission
                         result.password = ''
+                        
+                        let token = jwt.sign(JSON.stringify(result), 'THIS_IS_A_SECRET')
 
                         return res.send({
                             data: result,
+                            token,
                             success: true,
                             message: 'Logged in'
                         })
