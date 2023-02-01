@@ -16,6 +16,7 @@ Router.get('/member', (req, res) => {
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
+            let total = await Member.countDocuments()
             if (req.query._search) {
                 let search = req.query._search
                 result = result.filter(filter => {
@@ -24,11 +25,13 @@ Router.get('/member', (req, res) => {
                     if (filter.cycles.toString().toLowerCase().includes(search.toLowerCase())) return filter
                     if (filter.balance.toString().toLowerCase().includes(search.toLowerCase())) return filter
                 })
+
+                total = result.length
             }
 
             return res.status(200).send({
                 data: result,
-                total: await Member.countDocuments(),
+                total,
                 success: true,
                 message: 'Fetched members'
             })
@@ -157,10 +160,22 @@ Router.get('/payment', (req, res) => {
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
+        let total = await Payment.find(data).countDocuments()
+        if (req.query._search) {
+            let search = req.query._search
+            result = result.filter(filter => {
+                if (filter.paymentDate.toLowerCase().includes(search.toLowerCase())) return filter
+                if (filter.paymentAmount.toString().toLowerCase().includes(search.toLowerCase())) return filter
+                if (filter.balance.toString().toLowerCase().includes(search.toLowerCase())) return filter
+            })
+
+            total = result.length
+        }
+
         if (result) {
             return res.send({
                 data: result,
-                total: await Payment.find(data).countDocuments(),
+                total,
                 success: true,
                 message: 'Fetched member payments'
             })

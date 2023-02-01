@@ -72,6 +72,7 @@ Router.get('/employee', (req, res) => {
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
+            let total = await Employee.countDocuments()
             if (req.query._search) {
                 let search = req.query._search
                 result = result.filter(filter => {
@@ -80,11 +81,13 @@ Router.get('/employee', (req, res) => {
                     if (filter.username.toLowerCase().includes(search.toLowerCase())) return filter
                     if (filter.roleName.toLowerCase().includes(search.toLowerCase())) return filter
                 })
+
+                total = result.length
             }
 
             return res.status(200).send({
                 data: result,
-                total: await Employee.countDocuments(),
+                total,
                 success: true,
                 message: 'Fetched employees'
             })
