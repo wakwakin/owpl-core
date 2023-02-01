@@ -10,7 +10,7 @@ const Release = require('../models/release')
 const Center = require('../models/center')
 
 Router.get('/member', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     Member.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
@@ -139,7 +139,7 @@ Router.delete('/member', (req, res) => {
 })
 
 Router.get('/payment', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     let data = req.query.id ? { memberId: req.query.id } : {}
     Payment.find(data)
     .limit(vars.DATA_LIMIT)
@@ -244,7 +244,7 @@ Router.delete('/payment', (req, res) => {
 })
 
 Router.get('/saving', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     Saving.find({ memberId: req.query.id })
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
@@ -342,7 +342,7 @@ Router.delete('/saving', (req, res) => {
 })
 
 Router.get('/release', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     Release.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
@@ -468,7 +468,7 @@ Router.get('/center/fix', (req, res) => {
 })
 
 Router.get('/center', (req, res) => {
-    let page = req.query.page >= 1 ? parseInt(req.query.page) - 1 : 0
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     Center.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
