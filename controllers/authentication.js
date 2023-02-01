@@ -70,6 +70,16 @@ Router.get('/employee', (req, res) => {
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
+            if (req.query._search) {
+                let search = req.query._search
+                result = result.filter(filter => {
+                    if (filter.firstName.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.lastName.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.username.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.roleName.toLowerCase().includes(search.toLowerCase())) return filter
+                })
+            }
+
             return res.status(200).send({
                 data: result,
                 total: await Employee.countDocuments(),
