@@ -381,10 +381,34 @@ Router.delete("/payment", (req, res) => {
 
 Router.get("/saving", (req, res) => {
   let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let data = {};
+  if (req.query.id) {
+    data = { memberId: req.query.id };
+    if (req.query._search && req.query._column) {
+      let col = req.query._column;
+      let src = req.query._search;
+      let options = 'i'
+
+      data = {
+        memberId: req.query.id,
+        [col]: {
+          $regex: src,
+          $options: options,
+        },
+      };
+
+      if (Saving.schema.path(col) instanceof mongoose.Schema.Types.Number) {
+        data = {
+          memberId: req.query.id,
+          [col]: parseInt(src),
+        };
+      }
+    }
+  }
   let sort = req.query._sort
     ? { [req.query._sort]: req.query._order }
     : { paymentDate: "ASC" };
-  Saving.find({ memberId: req.query.id })
+  Saving.find(data)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
@@ -392,7 +416,7 @@ Router.get("/saving", (req, res) => {
       if (result) {
         return res.send({
           data: result,
-          total: await Saving.find({ memberId: req.query.id }).countDocuments(),
+          total: await Saving.find(data).countDocuments(),
           success: true,
           message: "Fetched member savings",
         });
@@ -414,11 +438,13 @@ Router.post("/saving", (req, res) => {
     {
       paymentDate: req.body.paymentDate,
       paymentAmount: req.body.paymentAmount,
+      savings: req.body.remainingSavings
     }
   ).then((result) => {
     let logValue = {
       paymentDate: result.paymentDate + " => " + req.body.paymentDate,
       paymentAmount: result.paymentAmount + " => " + req.body.paymentAmount,
+      savings: result.savings + " => " + req.body.remainingSavings,
     };
     if (result) {
       createLogs({
@@ -455,6 +481,7 @@ Router.put("/saving", (req, res) => {
         memberId: req.body.memberId,
         paymentDate: req.body.paymentDate,
         paymentAmount: req.body.paymentAmount,
+        savings: req.body.remainingSavings
       };
 
       const saving = new Saving(data);
@@ -481,7 +508,7 @@ Router.put("/saving", (req, res) => {
       return res.status(400).send({
         data: {},
         success: false,
-        message: "Member does not exist",
+        message: "Member id does not exist",
       });
     });
 });
@@ -845,6 +872,43 @@ Router.put("/balance", (req, res) => {
         data: result,
         success: true,
         message: "Updated balance",
+      });
+    }
+
+    return res.send({
+      data: {},
+      success: false,
+      message: "Something went wrong",
+    });
+  });
+});
+
+Router.get("/savings", (req, res) => {
+  Member.findOne({ _id: req.query.id }).then((member) => {
+    return res.send({
+      data: {
+        savings: member.savings,
+      },
+      success: true,
+      message: "Fetched member savings",
+    });
+  });
+});
+
+Router.put("/savings", (req, res) => {
+  Member.findOneAndUpdate(
+    {
+      _id: req.body.memberId,
+    },
+    {
+      savings: parseFloat(req.body.remainingSavings),
+    }
+  ).then((result) => {
+    if (result) {
+      return res.send({
+        data: result,
+        success: true,
+        message: "Updated savings",
       });
     }
 
