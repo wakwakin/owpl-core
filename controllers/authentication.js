@@ -7,6 +7,7 @@ const vars = require('../const')
 // Models
 const Employee = require('../models/employee')
 const Role = require('../models/role')
+const Log = require('../models/user-log')
 
 Router.post('/login', (req, res) => {
     Employee.findOne({ username: req.body.username }).then((result) => {
@@ -26,6 +27,14 @@ Router.post('/login', (req, res) => {
 
                         result.rolePermission = newPermission
                         result.password = ''
+
+                        createLogs({
+                            employeeId: result._id,
+                            employeeName: result.firstName + ' ' + result.lastName,
+                            actionValue: '',
+                            actionType: 'LOGGED_IN',
+                            date: new Date()
+                        })
                         
                         let token = jwt.sign(JSON.stringify(result), 'THIS_IS_A_SECRET')
 
@@ -112,7 +121,20 @@ Router.post('/employee', (req, res) => {
             roleId: req.body.roleId,
             roleName: newRole
         }).then((result) => {
+            let logValue = {
+                firstName: result.firstName + ' => ' + req.body.firstName,
+                lastName: result.lastName + ' => ' + req.body.lastName,
+                roleName: result.roleName + ' => ' + newRole,
+            }
             if (result) {
+                createLogs({
+                    employeeId: req.body.logEmployeeId,
+                    employeeName: req.body.logEmployeeName,
+                    actionValue: JSON.stringify(logValue),
+                    actionType: 'MODIFY_EMPLOYEE',
+                    date: new Date()
+                })
+
                 return res.status(200).send({
                     data: {
                         username: req.body.username,
@@ -163,6 +185,14 @@ Router.put('/employee', (req, res) => {
         const employee = new Employee(data)
     
         await employee.save().then(() => {
+            createLogs({
+                employeeId: req.body.logEmployeeId,
+                employeeName: req.body.logEmployeeName,
+                actionValue: JSON.stringify(employee),
+                actionType: 'CREATE_EMPLOYEE',
+                date: new Date()
+            })
+
             res.status(200).send({
                 data: {
                     id: employee._id.toString()
@@ -183,6 +213,14 @@ Router.put('/employee', (req, res) => {
 Router.delete('/employee', (req, res) => {
     Employee.findOneAndDelete({ username: req.body.username }).then((result) => {
         if (result) {
+            createLogs({
+                employeeId: req.body.logEmployeeId,
+                employeeName: req.body.logEmployeeName,
+                actionValue: JSON.stringify(result),
+                actionType: 'REMOVE_EMPLOYEE',
+                date: new Date()
+            })
+
             return res.status(200).send({
                 data: {
                     username: req.body.username
@@ -250,7 +288,19 @@ Router.post('/role', (req, res) => {
         roleName: req.body.roleName,
         rolePermission: req.body.rolePermission
     }).then((result) => {
+        let logValue = {
+            roleName: result.roleName + ' => ' + req.body.roleName,
+            rolePermission: result.rolePermission + ' => ' + req.body.rolePermission,
+        }
         if (result) {
+            createLogs({
+                employeeId: req.body.logEmployeeId,
+                employeeName: req.body.logEmployeeName,
+                actionValue: JSON.stringify(logValue),
+                actionType: 'MODIFY_ROLE',
+                date: new Date()
+            })
+
             return res.status(200).send({
                 data: {
                     roleName: req.body.roleName,
@@ -277,7 +327,15 @@ Router.put('/role', async (req, res) => {
 
     const role = new Role(data)
 
-    await role.save().then((asd) => {
+    await role.save().then(() => {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(role),
+            actionType: 'CREATE_ROLE',
+            date: new Date()
+        })
+
         res.status(200).send({
             data: role._id.toString(),
             success: true,
@@ -295,6 +353,14 @@ Router.put('/role', async (req, res) => {
 Router.delete('/role', (req, res) => {
     Role.findOneAndDelete({ _id: req.body.roleId }).then((result) => {
         if (result) {
+            createLogs({
+                employeeId: req.body.logEmployeeId,
+                employeeName: req.body.logEmployeeName,
+                actionValue: JSON.stringify(result),
+                actionType: 'REMOVE_ROLE',
+                date: new Date()
+            })
+
             return res.status(200).send({
                 data: {
                     roleId: req.body.roleId
@@ -311,5 +377,55 @@ Router.delete('/role', (req, res) => {
         })
     })
 })
+
+Router.get('/logs', (req, res) => {
+    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
+    let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { actionDate: 'ASC', actionTime: 'DESC' }
+    Log.find()
+    .limit(vars.DATA_LIMIT)
+    .sort(sort)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+        if (result) {
+            let total = await Log.countDocuments()
+            if (req.query._search) {
+                let search = req.query._search
+                result = result.filter(filter => {
+                    if (filter.employeeName.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.actionValue.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.actionType.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.actionDate.toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.actionTime.toLowerCase().includes(search.toLowerCase())) return filter
+                })
+
+                total = result.length
+            }
+
+            return res.status(200).send({
+                data: result,
+                total,
+                success: true,
+                message: 'Fetched logs'
+            })
+        }
+
+        return res.status(400).send({
+            data: {},
+            success: false,
+            message: 'No log'
+        })
+    })
+})
+
+function createLogs(received) {
+    new Log({
+        employeeId: received.employeeId,
+        employeeName: received.employeeName,
+        actionValue: received.actionValue,
+        actionType: received.actionType,
+        actionDate: received.date.getFullYear() + '-' + (received.date.getMonth() + 1) + '-' + received.date.getDate(),
+        actionTime: received.date.toLocaleString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
+    }).save()
+}
 
 module.exports = Router

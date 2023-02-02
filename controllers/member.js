@@ -1,643 +1,895 @@
-const express = require('express')
-const Router = express.Router()
+const express = require("express");
+const Router = express.Router();
 
-const vars = require('../const')
+const vars = require("../const");
 // Models
-const Member = require('../models/member')
-const Payment = require('../models/member-payment')
-const Saving = require('../models/saving')
-const Release = require('../models/release')
-const Center = require('../models/center')
+const Member = require("../models/member");
+const Payment = require("../models/member-payment");
+const Saving = require("../models/saving");
+const Release = require("../models/release");
+const Center = require("../models/center");
+const Log = require("../models/user-log");
 
-Router.get('/member', (req, res) => {
-    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
-    Member.find()
+Router.get("/member", (req, res) => {
+  let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  Member.find()
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
-        if (result) {
-            let total = await Member.countDocuments()
-            if (req.query._search) {
-                let search = req.query._search
-                result = result.filter(filter => {
-                    if (filter.memberName.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.centerName.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.cycles.toString().toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.balance.toString().toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.lastPaymentDate.toString().toLowerCase().includes(search.toLowerCase())) return filter
-                })
+      if (result) {
+        let total = await Member.countDocuments();
+        if (req.query._search) {
+          let search = req.query._search;
+          result = result.filter((filter) => {
+            if (filter.memberName.toLowerCase().includes(search.toLowerCase()))
+              return filter;
+            if (filter.centerName.toLowerCase().includes(search.toLowerCase()))
+              return filter;
+            if (
+              filter.cycles
+                .toString()
+                .toLowerCase()
+                .includes(search.toLowerCase())
+            )
+              return filter;
+            if (
+              filter.balance
+                .toString()
+                .toLowerCase()
+                .includes(search.toLowerCase())
+            )
+              return filter;
+            if (
+              filter.lastPaymentDate
+                .toString()
+                .toLowerCase()
+                .includes(search.toLowerCase())
+            )
+              return filter;
+          });
 
-                total = result.length
-            }
-
-            return res.status(200).send({
-                data: result,
-                total,
-                success: true,
-                message: 'Fetched members'
-            })
+          total = result.length;
         }
 
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'No member'
-        })
-    })
-})
+        return res.status(200).send({
+          data: result,
+          total,
+          success: true,
+          message: "Fetched members",
+        });
+      }
 
-Router.post('/member', (req, res) => {
-    let loanBalance = (parseFloat(req.body.releaseAmount) * .2) + (parseFloat(req.body.releaseAmount)) + (parseFloat(req.body.processingFee ? req.body.processingFee : 0))
-    let data = {
-        memberName: req.body.memberName,
-        lastReleaseDate: req.body.lastReleaseDate,
-        lastReleaseAmount: req.body.lastReleaseAmount,
-        lastPaymentDate: req.body.lastPaymentDate,
-        lastPaymentAmount: req.body.lastPaymentAmount,
-        releaseDate: req.body.releaseDate,
-        releaseAmount: req.body.releaseAmount,
-        savings: req.body.savings,
-        cycles: req.body.cycles,
-        centerId: req.body.centerId,
-        centerName: req.body.centerName,
-        balance: loanBalance,
+      return res.status(400).send({
+        data: {},
+        success: false,
+        message: "No member",
+      });
+    });
+});
+
+Router.post("/member", (req, res) => {
+  let loanBalance =
+    parseFloat(req.body.releaseAmount) * 0.2 +
+    parseFloat(req.body.releaseAmount) +
+    parseFloat(req.body.processingFee ? req.body.processingFee : 0);
+  let data = {
+    memberName: req.body.memberName,
+    lastReleaseDate: req.body.lastReleaseDate,
+    lastReleaseAmount: req.body.lastReleaseAmount,
+    lastPaymentDate: req.body.lastPaymentDate,
+    lastPaymentAmount: req.body.lastPaymentAmount,
+    releaseDate: req.body.releaseDate,
+    releaseAmount: req.body.releaseAmount,
+    savings: req.body.savings,
+    cycles: req.body.cycles,
+    centerId: req.body.centerId,
+    centerName: req.body.centerName,
+    balance: loanBalance,
+  };
+  if (req.body.sameBalanceToggle) {
+    data = {
+      memberName: req.body.memberName,
+      lastReleaseDate: req.body.lastReleaseDate,
+      lastReleaseAmount: req.body.lastReleaseAmount,
+      lastPaymentDate: req.body.lastPaymentDate,
+      lastPaymentAmount: req.body.lastPaymentAmount,
+      releaseDate: req.body.releaseDate,
+      releaseAmount: req.body.releaseAmount,
+      savings: req.body.savings,
+      cycles: req.body.cycles,
+      centerId: req.body.centerId,
+      centerName: req.body.centerName,
+    };
+  }
+  Member.findOneAndUpdate(
+    {
+      _id: req.body.memberId,
+    },
+    data
+  ).then((result) => {
+    let logValue = {
+      memberName: result.memberName + " => " + req.body.memberName,
+      lastReleaseDate:
+        result.lastReleaseDate + " => " + req.body.lastReleaseDate,
+      lastReleaseAmount:
+        result.lastReleaseAmount + " => " + req.body.lastReleaseAmount,
+      lastPaymentDate:
+        result.lastPaymentDate + " => " + req.body.lastPaymentDate,
+      lastPaymentAmount:
+        result.lastPaymentAmount + " => " + req.body.lastPaymentAmount,
+      releaseDate: result.releaseDate + " => " + req.body.releaseDate,
+      releaseAmount: result.releaseAmount + " => " + req.body.releaseAmount,
+      savings: result.savings + " => " + req.body.savings,
+      cycles: result.cycles + " => " + req.body.cycles,
+      centerId: result.centerId + " => " + req.body.centerId,
+      centerName: result.centerName + " => " + req.body.centerName,
+    };
+    if (result) {
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(logValue),
+        actionType: "MODIFY_MEMBER",
+        date: new Date(),
+      });
+
+      return res.status(200).send({
+        data,
+        success: true,
+        message: "Successfully updated member",
+      });
     }
-    if (req.body.sameBalanceToggle) {
-        data = {
-            memberName: req.body.memberName,
-            lastReleaseDate: req.body.lastReleaseDate,
-            lastReleaseAmount: req.body.lastReleaseAmount,
-            lastPaymentDate: req.body.lastPaymentDate,
-            lastPaymentAmount: req.body.lastPaymentAmount,
-            releaseDate: req.body.releaseDate,
-            releaseAmount: req.body.releaseAmount,
-            savings: req.body.savings,
-            cycles: req.body.cycles,
-            centerId: req.body.centerId,
-            centerName: req.body.centerName,
-        }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Member id does not exist",
+    });
+  });
+});
+
+Router.put("/member", async (req, res) => {
+  let loanBalance =
+    parseFloat(req.body.releaseAmount) * 0.2 +
+    parseFloat(req.body.releaseAmount) +
+    parseFloat(req.body.processingFee ? req.body.processingFee : 0);
+  const data = {
+    memberName: req.body.memberName,
+    lastReleaseDate: req.body.lastReleaseDate,
+    lastReleaseAmount: req.body.lastReleaseAmount,
+    lastPaymentDate: req.body.lastPaymentDate,
+    lastPaymentAmount: req.body.lastPaymentAmount,
+    releaseDate: req.body.releaseDate,
+    releaseAmount: req.body.releaseAmount,
+    savings: req.body.savings,
+    cycles: req.body.cycles,
+    centerId: req.body.centerId,
+    centerName: req.body.centerName,
+    balance: loanBalance,
+  };
+
+  const member = new Member(data);
+
+  await member
+    .save()
+    .then(() => {
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(member),
+        actionType: "CREATE_MEMBER",
+        date: new Date(),
+      });
+
+      res.status(200).send({
+        data: {
+          id: member._id.toString(),
+        },
+        success: true,
+        message: "Created a new member",
+      });
+    })
+    .catch(() => {
+      return res.status(400).send({
+        data: {},
+        success: false,
+        message: "Member already exist",
+      });
+    });
+});
+
+Router.delete("/member", (req, res) => {
+  Member.findOneAndDelete({ _id: req.body.memberId }).then((result) => {
+    if (result) {
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(result),
+        actionType: "REMOVE_MEMBER",
+        date: new Date(),
+      });
+
+      return res.status(200).send({
+        data: {
+          memberId: req.body.memberId,
+        },
+        success: true,
+        message: "Deleted a member",
+      });
     }
-    Member.findOneAndUpdate({
-        _id: req.body.memberId
-    }, data).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data,
-                success: true,
-                message: 'Successfully updated member'
-            })
-        }
 
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Member id does not exist'
-        })
-    })
-})
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Member does not exist",
+    });
+  });
+});
 
-Router.put('/member', async (req, res) => {
-    let loanBalance = (parseFloat(req.body.releaseAmount) * .2) + (parseFloat(req.body.releaseAmount)) + (parseFloat(req.body.processingFee ? req.body.processingFee : 0))
-    const data = {
-        memberName: req.body.memberName,
-        lastReleaseDate: req.body.lastReleaseDate,
-        lastReleaseAmount: req.body.lastReleaseAmount,
-        lastPaymentDate: req.body.lastPaymentDate,
-        lastPaymentAmount: req.body.lastPaymentAmount,
-        releaseDate: req.body.releaseDate,
-        releaseAmount: req.body.releaseAmount,
-        savings: req.body.savings,
-        cycles: req.body.cycles,
-        centerId: req.body.centerId,
-        centerName: req.body.centerName,
-        balance: loanBalance
-    }
-
-    const member = new Member(data)
-
-    await member.save().then(() => {
-        res.status(200).send({
-            data: {
-                id: member._id.toString()
-            },
-            success: true,
-            message: 'Created a new member'
-        })
-    }).catch(() => {
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Member already exist'
-        })
-    })
-})
-
-Router.delete('/member', (req, res) => {
-    Member.findOneAndDelete({ _id: req.body.memberId }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    memberId: req.body.memberId
-                },
-                success: true,
-                message: 'Deleted a member'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Member does not exist'
-        })
-    })
-})
-
-Router.get('/payment', (req, res) => {
-    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
-    let data = req.query.id ? { memberId: req.query.id } : {}
-    let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { paymentDate: 'ASC' }
-    Payment.find(data)
+Router.get("/payment", (req, res) => {
+  let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let data = req.query.id ? { memberId: req.query.id } : {};
+  let sort = req.query._sort
+    ? { [req.query._sort]: req.query._order }
+    : { paymentDate: "ASC" };
+  Payment.find(data)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
-        let total = await Payment.find(data).countDocuments()
-        if (req.query._search) {
-            let search = req.query._search
-            result = result.filter(filter => {
-                if (filter.paymentDate.toLowerCase().includes(search.toLowerCase())) return filter
-                if (filter.paymentAmount.toString().toLowerCase().includes(search.toLowerCase())) return filter
-                if (filter.balance.toString().toLowerCase().includes(search.toLowerCase())) return filter
-            })
+      let total = await Payment.find(data).countDocuments();
+      if (req.query._search) {
+        let search = req.query._search;
+        result = result.filter((filter) => {
+          if (filter.paymentDate.toLowerCase().includes(search.toLowerCase()))
+            return filter;
+          if (
+            filter.paymentAmount
+              .toString()
+              .toLowerCase()
+              .includes(search.toLowerCase())
+          )
+            return filter;
+          if (
+            filter.balance
+              .toString()
+              .toLowerCase()
+              .includes(search.toLowerCase())
+          )
+            return filter;
+        });
 
-            total = result.length
-        }
+        total = result.length;
+      }
 
-        if (result) {
-            return res.send({
-                data: result,
-                total,
-                success: true,
-                message: 'Fetched member payments'
-            })
-        }
-
+      if (result) {
         return res.send({
-            data: {},
-            success: false,
-            message: 'Member id does not exist'
-        })
-    })
-})
+          data: result,
+          total,
+          success: true,
+          message: "Fetched member payments",
+        });
+      }
 
-Router.post('/payment', (req, res) => {
-    Payment.findOneAndUpdate({
-        _id: req.body.paymentId
-    }, {
+      return res.send({
+        data: {},
+        success: false,
+        message: "Member id does not exist",
+      });
+    });
+});
+
+Router.post("/payment", (req, res) => {
+  Payment.findOneAndUpdate(
+    {
+      _id: req.body.paymentId,
+    },
+    {
+      paymentDate: req.body.paymentDate,
+      paymentAmount: req.body.paymentAmount,
+      cycle: req.body.cycle,
+      balance: req.body.remainingBalance,
+    }
+  ).then((result) => {
+    let logValue = {
+        paymentDate: result.paymentDate + ' => ' + req.body.paymentDate,
+        paymentAmount: result.paymentAmount + ' => ' + req.body.paymentAmount,
+        cycle: result.cycle + ' => ' + req.body.cycle,
+        balance: result.remainingBalance + ' => ' + req.body.remainingBalance,
+    }
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(logValue),
+            actionType: 'MODIFY_PAYMENT',
+            date: new Date()
+        })
+
+      return res.status(200).send({
+        data: {
+          paymentId: req.body.paymentId,
+          paymentDate: req.body.paymentDate,
+          paymentAmount: req.body.paymentAmount,
+          cycle: req.body.cycle,
+          balance: req.body.remainingBalance,
+        },
+        success: true,
+        message: "Successfully updated payment",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Payment id does not exist",
+    });
+  });
+});
+
+Router.put("/payment", (req, res) => {
+  Member.findById({ _id: req.body.memberId })
+    .then(async (result) => {
+      const data = {
+        memberId: req.body.memberId,
         paymentDate: req.body.paymentDate,
         paymentAmount: req.body.paymentAmount,
         cycle: req.body.cycle,
         balance: req.body.remainingBalance,
-    }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    paymentId: req.body.paymentId,
-                    paymentDate: req.body.paymentDate,
-                    paymentAmount: req.body.paymentAmount,
-                    cycle: req.body.cycle,
-                    balance: req.body.remainingBalance,
-                },
-                success: true,
-                message: 'Successfully updated payment'
-            })
-        }
+      };
 
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Payment id does not exist'
+      const payment = new Payment(data);
+
+      await payment.save().then(() => {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(payment),
+            actionType: 'CREATE_PAYMENT',
+            date: new Date()
         })
+
+        return res.status(200).send({
+          data: {
+            id: payment._id.toString(),
+          },
+          success: true,
+          message: "Created a new payment",
+        });
+      });
     })
-})
+    .catch(() => {
+      return res.status(400).send({
+        data: {},
+        success: false,
+        message: "Member does not exist",
+      });
+    });
+});
 
-Router.put('/payment', (req, res) => {
-    Member.findById({ _id: req.body.memberId }).then(async (result) => {
-        const data = {
-            memberId: req.body.memberId,
-            paymentDate: req.body.paymentDate,
-            paymentAmount: req.body.paymentAmount,
-            cycle: req.body.cycle,
-            balance: req.body.remainingBalance,
-        }
-    
-        const payment = new Payment(data)
-    
-        await payment.save().then(() => {
-            return res.status(200).send({
-                data: {
-                    id: payment._id.toString()
-                },
-                success: true,
-                message: 'Created a new payment'
-            })
-        })
-    }).catch(() => {
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Member does not exist'
-        })
-    })
-})
-
-Router.delete('/payment', (req, res) => {
-    Payment.findOneAndDelete({ _id: req.body.paymentId }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    paymentId: req.body.paymentId
-                },
-                success: true,
-                message: 'Deleted a payment'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Payment does not exist'
-        })
-    })
-})
-
-Router.get('/saving', (req, res) => {
-    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
-    let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { paymentDate: 'ASC' }
-    Saving.find({ memberId: req.query.id })
-    .limit(vars.DATA_LIMIT)
-    .sort(sort)
-    .skip(page * vars.DATA_LIMIT)
-    .then(async (result) => {
-        if (result) {
-            return res.send({
-                data: result,
-                total: await Saving.find({ memberId: req.query.id }).countDocuments(),
-                success: true,
-                message: 'Fetched member savings'
-            })
-        }
-
-        return res.send({
-            data: {},
-            success: false,
-            message: 'Member id does not exist'
-        })
-    })
-})
-
-Router.post('/saving', (req, res) => {
-    Saving.findOneAndUpdate({
-        _id: req.body.savingId
-    }, {
-        paymentDate: req.body.paymentDate,
-        paymentAmount: req.body.paymentAmount
-    }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    savingId: req.body.savingId,
-                    paymentDate: req.body.paymentDate,
-                    paymentAmount: req.body.paymentAmount
-                },
-                success: true,
-                message: 'Successfully updated savings'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Savings id does not exist'
-        })
-    })
-})
-
-Router.put('/saving', (req, res) => {
-    Member.findById({ _id: req.body.memberId }).then(async (result) => {
-        const data = {
-            memberId: req.body.memberId,
-            paymentDate: req.body.paymentDate,
-            paymentAmount: req.body.paymentAmount
-        }
-    
-        const saving = new Saving(data)
-    
-        await saving.save().then(() => {
-            return res.status(200).send({
-                data: {
-                    id: saving._id.toString()
-                },
-                success: true,
-                message: 'Created a new savings'
-            })
-        })
-    }).catch(() => {
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Member does not exist'
-        })
-    })
-})
-
-Router.delete('/saving', (req, res) => {
-    Saving.findOneAndDelete({ _id: req.body.savingId }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    savingId: req.body.savingId
-                },
-                success: true,
-                message: 'Deleted a savings'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Savings does not exist'
-        })
-    })
-})
-
-Router.get('/release', (req, res) => {
-    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
-    let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { releaseDate: 'ASC' }
-    Release.find()
-    .limit(vars.DATA_LIMIT)
-    .sort(sort)
-    .skip(page * vars.DATA_LIMIT)
-    .then(async (result) => {
-        if (result) {
-            return res.send({
-                data: result,
-                total: await Release.find().countDocuments(),
-                success: true,
-                message: 'Fetched releases'
-            })
-        }
-
-        return res.send({
-            data: {},
-            success: false,
-            message: 'No releases'
-        })
-    })
-})
-
-Router.post('/release', (req, res) => {
-    Release.findOneAndUpdate({
-        _id: req.body.releaseId
-    }, {
-        nextPaymentDate: req.body.nextPaymentDate,
-        dailyPayment: req.body.dailyPayment
-    }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    releaseId: req.body.releaseId,
-                    nextPaymentDate: req.body.nextPaymentDate,
-                    dailyPayment: req.body.dailyPayment
-                },
-                success: true,
-                message: 'Successfully updated release'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Release id does not exist'
-        })
-    })
-})
-
-Router.put('/release', (req, res) => {
-    Member.findById({ _id: req.body.memberId }).then(async (result) => {
-        const data = {
-            memberId: req.body.memberId,
-            remainingBalance: req.body.remainingBalance,
-            releaseDate: req.body.releaseDate,
-            releaseAmount: req.body.releaseAmount,
-            releaseOutgoing: req.body.releaseOutgoing,
-            nextPaymentDate: req.body.nextPaymentDate,
-            dailyPayment: req.body.dailyPayment
-        }
-    
-        const release = new Release(data)
-    
-        await release.save().then(() => {
-            return res.status(200).send({
-                data: {
-                    id: release._id.toString()
-                },
-                success: true,
-                message: 'Created a new release'
-            })
-        })
-    }).catch(() => {
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Member does not exist'
-        })
-    })
-})
-
-Router.delete('/release', (req, res) => {
-    Release.findOneAndDelete({ _id: req.body.releaseId }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    releaseId: req.body.releaseId
-                },
-                success: true,
-                message: 'Deleted a release'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Release does not exist'
-        })
-    })
-})
-
-Router.get('/center/fix', (req, res) => {
-    Member.find().then(async (result) => {
-        if (!result) return res.send({ data: {}, success: false, message: 'No members' })
-        
-        result.map((member) => {
-            let centerName = member.centerName
-            let centerId = member.centerId
-            let memberId = member._id.toString()
-            Center.find({ _id: centerId }).then((center) => {
-                let newCenterName = center[0].centerName
-                if (newCenterName != centerName) {
-                    Member.findOneAndUpdate({ _id: memberId }, { centerName: newCenterName}).then((result) => data.push(result))
-                }
-            })
+Router.delete("/payment", (req, res) => {
+  Payment.findOneAndDelete({ _id: req.body.paymentId }).then((result) => {
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(result),
+            actionType: 'REMOVE_PAYMENT',
+            date: new Date()
         })
 
-        return res.send({
-            data: {},
-            success: true,
-            message: 'Fixed center names'
-        })
-    })
-})
-
-Router.get('/center', (req, res) => {
-    let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
-    let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { centerName: 'ASC' }
-    Center.find()
-    .limit(vars.DATA_LIMIT)
-    .sort(sort)
-    .skip(page * vars.DATA_LIMIT)
-    .then(async (result) => {
-        let total = await Center.countDocuments()
-        if (req.query._search) {
-            let search = req.query._search
-            result = result.filter(filter => {
-                if (filter.centerName.toLowerCase().includes(search.toLowerCase())) return filter
-                if (filter.centerLeader.toLowerCase().includes(search.toLowerCase())) return filter
-            })
-
-            total = result.length
-        }
-
-        if (result) {
-            return res.send({
-                data: result,
-                total,
-                success: true,
-                message: 'Fetched centers'
-            })
-        }
-
-        return res.send({
-            data: {},
-            success: false,
-            message: 'No centers'
-        })
-    })
-})
-
-Router.post('/center', (req, res) => {
-    Center.findOneAndUpdate({
-        _id: req.body.centerId
-    }, {
-        centerName: req.body.centerName,
-        centerLeader: req.body.centerLeader
-    }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    centerId: req.body.centerId,
-                    centerName: req.body.centerName,
-                    centerLeader: req.body.centerLeader
-                },
-                success: true,
-                message: 'Successfully updated center'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Center id does not exist'
-        })
-    })
-})
-
-Router.put('/center', async (req, res) => {
-    const data = {
-        centerName: req.body.centerName,
-        centerLeader: req.body.centerLeader
+      return res.status(200).send({
+        data: {
+          paymentId: req.body.paymentId,
+        },
+        success: true,
+        message: "Deleted a payment",
+      });
     }
 
-    const center = new Center(data)
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Payment does not exist",
+    });
+  });
+});
 
-    await center.save().then(() => {
-        return res.status(200).send({
-            data: {
-                id: center._id.toString()
-            },
-            success: true,
-            message: 'Created a new center'
-        })
-    })
-})
-
-Router.delete('/center', (req, res) => {
-    Center.findOneAndDelete({ _id: req.body.centerId }).then((result) => {
-        if (result) {
-            return res.status(200).send({
-                data: {
-                    centerId: req.body.centerId
-                },
-                success: true,
-                message: 'Deleted a center'
-            })
-        }
-
-        return res.status(400).send({
-            data: {},
-            success: false,
-            message: 'Center does not exist'
-        })
-    })
-})
-
-Router.get('/balance', (req, res) => {
-    Member.findOne({ _id: req.query.id }).then((member) => {
+Router.get("/saving", (req, res) => {
+  let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let sort = req.query._sort
+    ? { [req.query._sort]: req.query._order }
+    : { paymentDate: "ASC" };
+  Saving.find({ memberId: req.query.id })
+    .limit(vars.DATA_LIMIT)
+    .sort(sort)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+      if (result) {
         return res.send({
-            data: {
-                balance: member.balance
-            },
-            success: true,
-            message: 'Fetched member balance'
-        })
-    })
-})
+          data: result,
+          total: await Saving.find({ memberId: req.query.id }).countDocuments(),
+          success: true,
+          message: "Fetched member savings",
+        });
+      }
 
-Router.put('/balance', (req, res) => {
-    Member.findOneAndUpdate(
-        {
-            _id: req.body.memberId
+      return res.send({
+        data: {},
+        success: false,
+        message: "Member id does not exist",
+      });
+    });
+});
+
+Router.post("/saving", (req, res) => {
+  Saving.findOneAndUpdate(
+    {
+      _id: req.body.savingId,
+    },
+    {
+      paymentDate: req.body.paymentDate,
+      paymentAmount: req.body.paymentAmount,
+    }
+  ).then((result) => {
+    let logValue = {
+        paymentDate: result.paymentDate + ' => ' + req.body.paymentDate,
+        paymentAmount: result.paymentAmount + ' => ' + req.body.paymentAmount,
+    }
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(logValue),
+            actionType: 'MODIFY_SAVING',
+            date: new Date()
+        })
+
+      return res.status(200).send({
+        data: {
+          savingId: req.body.savingId,
+          paymentDate: req.body.paymentDate,
+          paymentAmount: req.body.paymentAmount,
         },
-        {
-            lastPaymentAmount:  parseFloat(req.body.paymentAmount),
-            lastPaymentDate: req.body.paymentDate,
-            balance: parseFloat(req.body.remainingBalance)
-        }
-    ).then((result) => {
-        if (result) {
-            return res.send({
-                data: result,
-                success: true,
-                message: "Updated balance"
-            })
-        }
+        success: true,
+        message: "Successfully updated savings",
+      });
+    }
 
-        return res.send({
-            data: {},
-            success: false,
-            message: 'Something went wrong'
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Savings id does not exist",
+    });
+  });
+});
+
+Router.put("/saving", (req, res) => {
+  Member.findById({ _id: req.body.memberId })
+    .then(async (result) => {
+      const data = {
+        memberId: req.body.memberId,
+        paymentDate: req.body.paymentDate,
+        paymentAmount: req.body.paymentAmount,
+      };
+
+      const saving = new Saving(data);
+
+      await saving.save().then(() => {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(saving),
+            actionType: 'CREATE_SAVING',
+            date: new Date()
         })
-    })
-})
 
-module.exports = Router
+        return res.status(200).send({
+          data: {
+            id: saving._id.toString(),
+          },
+          success: true,
+          message: "Created a new savings",
+        });
+      });
+    })
+    .catch(() => {
+      return res.status(400).send({
+        data: {},
+        success: false,
+        message: "Member does not exist",
+      });
+    });
+});
+
+Router.delete("/saving", (req, res) => {
+  Saving.findOneAndDelete({ _id: req.body.savingId }).then((result) => {
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(result),
+            actionType: 'REMOVE_SAVING',
+            date: new Date()
+        })
+      return res.status(200).send({
+        data: {
+          savingId: req.body.savingId,
+        },
+        success: true,
+        message: "Deleted a savings",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Savings does not exist",
+    });
+  });
+});
+
+Router.get("/release", (req, res) => {
+  let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let sort = req.query._sort
+    ? { [req.query._sort]: req.query._order }
+    : { releaseDate: "ASC" };
+  Release.find()
+    .limit(vars.DATA_LIMIT)
+    .sort(sort)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+      if (result) {
+        return res.send({
+          data: result,
+          total: await Release.find().countDocuments(),
+          success: true,
+          message: "Fetched releases",
+        });
+      }
+
+      return res.send({
+        data: {},
+        success: false,
+        message: "No releases",
+      });
+    });
+});
+
+Router.post("/release", (req, res) => {
+  Release.findOneAndUpdate(
+    {
+      _id: req.body.releaseId,
+    },
+    {
+      nextPaymentDate: req.body.nextPaymentDate,
+      dailyPayment: req.body.dailyPayment,
+    }
+  ).then((result) => {
+    let logValue = {
+        nextPaymentDate: result.nextPaymentDate + ' => ' + req.body.nextPaymentDate,
+        dailyPayment: result.dailyPayment + ' => ' + req.body.dailyPayment,
+    }
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(logValue),
+            actionType: 'MODIFY_RELEASE',
+            date: new Date()
+        })
+
+      return res.status(200).send({
+        data: {
+          releaseId: req.body.releaseId,
+          nextPaymentDate: req.body.nextPaymentDate,
+          dailyPayment: req.body.dailyPayment,
+        },
+        success: true,
+        message: "Successfully updated release",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Release id does not exist",
+    });
+  });
+});
+
+Router.put("/release", (req, res) => {
+  Member.findById({ _id: req.body.memberId })
+    .then(async (result) => {
+      const data = {
+        memberId: req.body.memberId,
+        remainingBalance: req.body.remainingBalance,
+        releaseDate: req.body.releaseDate,
+        releaseAmount: req.body.releaseAmount,
+        releaseOutgoing: req.body.releaseOutgoing,
+        nextPaymentDate: req.body.nextPaymentDate,
+        dailyPayment: req.body.dailyPayment,
+      };
+
+      const release = new Release(data);
+
+      await release.save().then(() => {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(release),
+            actionType: 'CREATE_RELEASE',
+            date: new Date()
+        })
+
+        return res.status(200).send({
+          data: {
+            id: release._id.toString(),
+          },
+          success: true,
+          message: "Created a new release",
+        });
+      });
+    })
+    .catch(() => {
+      return res.status(400).send({
+        data: {},
+        success: false,
+        message: "Member does not exist",
+      });
+    });
+});
+
+Router.delete("/release", (req, res) => {
+  Release.findOneAndDelete({ _id: req.body.releaseId }).then((result) => {
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(result),
+            actionType: 'REMOVE_RELEASE',
+            date: new Date()
+        })
+
+      return res.status(200).send({
+        data: {
+          releaseId: req.body.releaseId,
+        },
+        success: true,
+        message: "Deleted a release",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Release does not exist",
+    });
+  });
+});
+
+Router.get("/center/fix", (req, res) => {
+  Member.find().then(async (result) => {
+    if (!result)
+      return res.send({ data: {}, success: false, message: "No members" });
+
+    result.map((member) => {
+      let centerName = member.centerName;
+      let centerId = member.centerId;
+      let memberId = member._id.toString();
+      Center.find({ _id: centerId }).then((center) => {
+        let newCenterName = center[0].centerName;
+        if (newCenterName != centerName) {
+          Member.findOneAndUpdate(
+            { _id: memberId },
+            { centerName: newCenterName }
+          ).then((result) => data.push(result));
+        }
+      });
+    });
+
+    return res.send({
+      data: {},
+      success: true,
+      message: "Fixed center names",
+    });
+  });
+});
+
+Router.get("/center", (req, res) => {
+  let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let sort = req.query._sort
+    ? { [req.query._sort]: req.query._order }
+    : { centerName: "ASC" };
+  Center.find()
+    .limit(vars.DATA_LIMIT)
+    .sort(sort)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
+      let total = await Center.countDocuments();
+      if (req.query._search) {
+        let search = req.query._search;
+        result = result.filter((filter) => {
+          if (filter.centerName.toLowerCase().includes(search.toLowerCase()))
+            return filter;
+          if (filter.centerLeader.toLowerCase().includes(search.toLowerCase()))
+            return filter;
+        });
+
+        total = result.length;
+      }
+
+      if (result) {
+        return res.send({
+          data: result,
+          total,
+          success: true,
+          message: "Fetched centers",
+        });
+      }
+
+      return res.send({
+        data: {},
+        success: false,
+        message: "No centers",
+      });
+    });
+});
+
+Router.post("/center", (req, res) => {
+  Center.findOneAndUpdate(
+    {
+      _id: req.body.centerId,
+    },
+    {
+      centerName: req.body.centerName,
+      centerLeader: req.body.centerLeader,
+    }
+  ).then((result) => {
+    let logValue = {
+        centerName: result.centerName + ' => ' + req.body.centerName,
+        centerLeader: result.centerLeader + ' => ' + req.body.centerLeader,
+    }
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(logValue),
+            actionType: 'MODIFY_CENTER',
+            date: new Date()
+        })
+
+      return res.status(200).send({
+        data: {
+          centerId: req.body.centerId,
+          centerName: req.body.centerName,
+          centerLeader: req.body.centerLeader,
+        },
+        success: true,
+        message: "Successfully updated center",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Center id does not exist",
+    });
+  });
+});
+
+Router.put("/center", async (req, res) => {
+  const data = {
+    centerName: req.body.centerName,
+    centerLeader: req.body.centerLeader,
+  };
+
+  const center = new Center(data);
+
+  await center.save().then(() => {
+    createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(center),
+        actionType: 'CREATE_CENTER',
+        date: new Date()
+    })
+
+    return res.status(200).send({
+      data: {
+        id: center._id.toString(),
+      },
+      success: true,
+      message: "Created a new center",
+    });
+  });
+});
+
+Router.delete("/center", (req, res) => {
+  Center.findOneAndDelete({ _id: req.body.centerId }).then((result) => {
+    if (result) {
+        createLogs({
+            employeeId: req.body.logEmployeeId,
+            employeeName: req.body.logEmployeeName,
+            actionValue: JSON.stringify(result),
+            actionType: 'REMOVE_CENTER',
+            date: new Date()
+        })
+
+      return res.status(200).send({
+        data: {
+          centerId: req.body.centerId,
+        },
+        success: true,
+        message: "Deleted a center",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Center does not exist",
+    });
+  });
+});
+
+Router.get("/balance", (req, res) => {
+  Member.findOne({ _id: req.query.id }).then((member) => {
+    return res.send({
+      data: {
+        balance: member.balance,
+      },
+      success: true,
+      message: "Fetched member balance",
+    });
+  });
+});
+
+Router.put("/balance", (req, res) => {
+  Member.findOneAndUpdate(
+    {
+      _id: req.body.memberId,
+    },
+    {
+      lastPaymentAmount: parseFloat(req.body.paymentAmount),
+      lastPaymentDate: req.body.paymentDate,
+      balance: parseFloat(req.body.remainingBalance),
+    }
+  ).then((result) => {
+    if (result) {
+      return res.send({
+        data: result,
+        success: true,
+        message: "Updated balance",
+      });
+    }
+
+    return res.send({
+      data: {},
+      success: false,
+      message: "Something went wrong",
+    });
+  });
+});
+
+function createLogs(received) {
+  new Log({
+    employeeId: received.employeeId,
+    employeeName: received.employeeName,
+    actionValue: received.actionValue,
+    actionType: received.actionType,
+    actionDate:
+      received.date.getFullYear() +
+      "-" +
+      (received.date.getMonth() + 1) +
+      "-" +
+      received.date.getDate(),
+    actionTime: received.date.toLocaleString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }),
+  }).save();
+}
+
+module.exports = Router;
