@@ -9,51 +9,37 @@ const Saving = require("../models/saving");
 const Release = require("../models/release");
 const Center = require("../models/center");
 const Log = require("../models/user-log");
+const { default: mongoose } = require("mongoose");
 
 Router.get("/member", (req, res) => {
   let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
-  Member.find()
+  let search = {};
+  if (req.query._search && req.query._column) {
+    let col = req.query._column;
+    let src = req.query._search;
+    let options = 'i'
+
+    search = {
+      [col]: {
+        $regex: src,
+        $options: options,
+      },
+    };
+
+    if (Member.schema.path(col) instanceof mongoose.Schema.Types.Number) {
+      search = {
+        [col]: parseInt(src),
+      };
+    }
+  }
+  Member.find(search)
     .limit(vars.DATA_LIMIT)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
       if (result) {
-        let total = await Member.countDocuments();
-        if (req.query._search) {
-          let search = req.query._search;
-          result = result.filter((filter) => {
-            if (filter.memberName.toLowerCase().includes(search.toLowerCase()))
-              return filter;
-            if (filter.centerName.toLowerCase().includes(search.toLowerCase()))
-              return filter;
-            if (
-              filter.cycles
-                .toString()
-                .toLowerCase()
-                .includes(search.toLowerCase())
-            )
-              return filter;
-            if (
-              filter.balance
-                .toString()
-                .toLowerCase()
-                .includes(search.toLowerCase())
-            )
-              return filter;
-            if (
-              filter.lastPaymentDate
-                .toString()
-                .toLowerCase()
-                .includes(search.toLowerCase())
-            )
-              return filter;
-          });
-
-          total = result.length;
-        }
-
         return res.status(200).send({
           data: result,
-          total,
+          total: await Member.find(search).countDocuments(),
           success: true,
           message: "Fetched members",
         });
@@ -228,7 +214,30 @@ Router.delete("/member", (req, res) => {
 
 Router.get("/payment", (req, res) => {
   let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
-  let data = req.query.id ? { memberId: req.query.id } : {};
+  let data = {};
+  if (req.query.id) {
+    data = { memberId: req.query.id };
+    if (req.query._search && req.query._column) {
+      let col = req.query._column;
+      let src = req.query._search;
+      let options = 'i'
+
+      data = {
+        memberId: req.query.id,
+        [col]: {
+          $regex: src,
+          $options: options,
+        },
+      };
+
+      if (Payment.schema.path(col) instanceof mongoose.Schema.Types.Number) {
+        data = {
+          memberId: req.query.id,
+          [col]: parseInt(src),
+        };
+      }
+    }
+  }
   let sort = req.query._sort
     ? { [req.query._sort]: req.query._order }
     : { paymentDate: "ASC" };
@@ -237,35 +246,10 @@ Router.get("/payment", (req, res) => {
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
-      let total = await Payment.find(data).countDocuments();
-      if (req.query._search) {
-        let search = req.query._search;
-        result = result.filter((filter) => {
-          if (filter.paymentDate.toLowerCase().includes(search.toLowerCase()))
-            return filter;
-          if (
-            filter.paymentAmount
-              .toString()
-              .toLowerCase()
-              .includes(search.toLowerCase())
-          )
-            return filter;
-          if (
-            filter.balance
-              .toString()
-              .toLowerCase()
-              .includes(search.toLowerCase())
-          )
-            return filter;
-        });
-
-        total = result.length;
-      }
-
       if (result) {
         return res.send({
           data: result,
-          total,
+          total: await Payment.find(data).countDocuments(),
           success: true,
           message: "Fetched member payments",
         });
@@ -292,19 +276,19 @@ Router.post("/payment", (req, res) => {
     }
   ).then((result) => {
     let logValue = {
-        paymentDate: result.paymentDate + ' => ' + req.body.paymentDate,
-        paymentAmount: result.paymentAmount + ' => ' + req.body.paymentAmount,
-        cycle: result.cycle + ' => ' + req.body.cycle,
-        balance: result.remainingBalance + ' => ' + req.body.remainingBalance,
-    }
+      paymentDate: result.paymentDate + " => " + req.body.paymentDate,
+      paymentAmount: result.paymentAmount + " => " + req.body.paymentAmount,
+      cycle: result.cycle + " => " + req.body.cycle,
+      balance: result.remainingBalance + " => " + req.body.remainingBalance,
+    };
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(logValue),
-            actionType: 'MODIFY_PAYMENT',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(logValue),
+        actionType: "MODIFY_PAYMENT",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {
@@ -342,12 +326,12 @@ Router.put("/payment", (req, res) => {
 
       await payment.save().then(() => {
         createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(payment),
-            actionType: 'CREATE_PAYMENT',
-            date: new Date()
-        })
+          employeeId: req.body.logEmployeeId,
+          employeeName: req.body.logEmployeeName,
+          actionValue: JSON.stringify(payment),
+          actionType: "CREATE_PAYMENT",
+          date: new Date(),
+        });
 
         return res.status(200).send({
           data: {
@@ -370,13 +354,13 @@ Router.put("/payment", (req, res) => {
 Router.delete("/payment", (req, res) => {
   Payment.findOneAndDelete({ _id: req.body.paymentId }).then((result) => {
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(result),
-            actionType: 'REMOVE_PAYMENT',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(result),
+        actionType: "REMOVE_PAYMENT",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {
@@ -433,17 +417,17 @@ Router.post("/saving", (req, res) => {
     }
   ).then((result) => {
     let logValue = {
-        paymentDate: result.paymentDate + ' => ' + req.body.paymentDate,
-        paymentAmount: result.paymentAmount + ' => ' + req.body.paymentAmount,
-    }
+      paymentDate: result.paymentDate + " => " + req.body.paymentDate,
+      paymentAmount: result.paymentAmount + " => " + req.body.paymentAmount,
+    };
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(logValue),
-            actionType: 'MODIFY_SAVING',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(logValue),
+        actionType: "MODIFY_SAVING",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {
@@ -477,12 +461,12 @@ Router.put("/saving", (req, res) => {
 
       await saving.save().then(() => {
         createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(saving),
-            actionType: 'CREATE_SAVING',
-            date: new Date()
-        })
+          employeeId: req.body.logEmployeeId,
+          employeeName: req.body.logEmployeeName,
+          actionValue: JSON.stringify(saving),
+          actionType: "CREATE_SAVING",
+          date: new Date(),
+        });
 
         return res.status(200).send({
           data: {
@@ -505,13 +489,13 @@ Router.put("/saving", (req, res) => {
 Router.delete("/saving", (req, res) => {
   Saving.findOneAndDelete({ _id: req.body.savingId }).then((result) => {
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(result),
-            actionType: 'REMOVE_SAVING',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(result),
+        actionType: "REMOVE_SAVING",
+        date: new Date(),
+      });
       return res.status(200).send({
         data: {
           savingId: req.body.savingId,
@@ -567,17 +551,18 @@ Router.post("/release", (req, res) => {
     }
   ).then((result) => {
     let logValue = {
-        nextPaymentDate: result.nextPaymentDate + ' => ' + req.body.nextPaymentDate,
-        dailyPayment: result.dailyPayment + ' => ' + req.body.dailyPayment,
-    }
+      nextPaymentDate:
+        result.nextPaymentDate + " => " + req.body.nextPaymentDate,
+      dailyPayment: result.dailyPayment + " => " + req.body.dailyPayment,
+    };
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(logValue),
-            actionType: 'MODIFY_RELEASE',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(logValue),
+        actionType: "MODIFY_RELEASE",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {
@@ -615,12 +600,12 @@ Router.put("/release", (req, res) => {
 
       await release.save().then(() => {
         createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(release),
-            actionType: 'CREATE_RELEASE',
-            date: new Date()
-        })
+          employeeId: req.body.logEmployeeId,
+          employeeName: req.body.logEmployeeName,
+          actionValue: JSON.stringify(release),
+          actionType: "CREATE_RELEASE",
+          date: new Date(),
+        });
 
         return res.status(200).send({
           data: {
@@ -643,13 +628,13 @@ Router.put("/release", (req, res) => {
 Router.delete("/release", (req, res) => {
   Release.findOneAndDelete({ _id: req.body.releaseId }).then((result) => {
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(result),
-            actionType: 'REMOVE_RELEASE',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(result),
+        actionType: "REMOVE_RELEASE",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {
@@ -701,28 +686,27 @@ Router.get("/center", (req, res) => {
   let sort = req.query._sort
     ? { [req.query._sort]: req.query._order }
     : { centerName: "ASC" };
-  Center.find()
+  let search = {};
+  if (req.query._search && req.query._column) {
+    let col = req.query._column;
+    let src = req.query._search;
+
+    search = {
+      [col]: {
+        $regex: src,
+        $options: "i",
+      },
+    };
+  }
+  Center.find(search)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
-      let total = await Center.countDocuments();
-      if (req.query._search) {
-        let search = req.query._search;
-        result = result.filter((filter) => {
-          if (filter.centerName.toLowerCase().includes(search.toLowerCase()))
-            return filter;
-          if (filter.centerLeader.toLowerCase().includes(search.toLowerCase()))
-            return filter;
-        });
-
-        total = result.length;
-      }
-
       if (result) {
         return res.send({
           data: result,
-          total,
+          total: await Center.find(search).countDocuments(),
           success: true,
           message: "Fetched centers",
         });
@@ -747,17 +731,17 @@ Router.post("/center", (req, res) => {
     }
   ).then((result) => {
     let logValue = {
-        centerName: result.centerName + ' => ' + req.body.centerName,
-        centerLeader: result.centerLeader + ' => ' + req.body.centerLeader,
-    }
+      centerName: result.centerName + " => " + req.body.centerName,
+      centerLeader: result.centerLeader + " => " + req.body.centerLeader,
+    };
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(logValue),
-            actionType: 'MODIFY_CENTER',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(logValue),
+        actionType: "MODIFY_CENTER",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {
@@ -788,12 +772,12 @@ Router.put("/center", async (req, res) => {
 
   await center.save().then(() => {
     createLogs({
-        employeeId: req.body.logEmployeeId,
-        employeeName: req.body.logEmployeeName,
-        actionValue: JSON.stringify(center),
-        actionType: 'CREATE_CENTER',
-        date: new Date()
-    })
+      employeeId: req.body.logEmployeeId,
+      employeeName: req.body.logEmployeeName,
+      actionValue: JSON.stringify(center),
+      actionType: "CREATE_CENTER",
+      date: new Date(),
+    });
 
     return res.status(200).send({
       data: {
@@ -808,13 +792,13 @@ Router.put("/center", async (req, res) => {
 Router.delete("/center", (req, res) => {
   Center.findOneAndDelete({ _id: req.body.centerId }).then((result) => {
     if (result) {
-        createLogs({
-            employeeId: req.body.logEmployeeId,
-            employeeName: req.body.logEmployeeName,
-            actionValue: JSON.stringify(result),
-            actionType: 'REMOVE_CENTER',
-            date: new Date()
-        })
+      createLogs({
+        employeeId: req.body.logEmployeeId,
+        employeeName: req.body.logEmployeeName,
+        actionValue: JSON.stringify(result),
+        actionType: "REMOVE_CENTER",
+        date: new Date(),
+      });
 
       return res.status(200).send({
         data: {

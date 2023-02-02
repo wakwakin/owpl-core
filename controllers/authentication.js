@@ -75,28 +75,27 @@ Router.post('/logout', (req, res) => {
 Router.get('/employee', (req, res) => {
     let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { firstName: 'ASC' }
-    Employee.find()
+    let search = {}
+    if (req.query._search && req.query._column) {
+        let col = req.query._column
+        let src = req.query._search
+
+        search = {
+            [col]: {
+                "$regex": src,
+                "$options": 'i'
+            }
+        }
+    }
+    Employee.find(search)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
-            let total = await Employee.countDocuments()
-            if (req.query._search) {
-                let search = req.query._search
-                result = result.filter(filter => {
-                    if (filter.firstName.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.lastName.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.username.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.roleName.toLowerCase().includes(search.toLowerCase())) return filter
-                })
-
-                total = result.length
-            }
-
             return res.status(200).send({
                 data: result,
-                total,
+                total: await Employee.find(search).countDocuments(),
                 success: true,
                 message: 'Fetched employees'
             })
@@ -241,7 +240,19 @@ Router.delete('/employee', (req, res) => {
 Router.get('/role', (req, res) => {
     let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { roleName: 'ASC' }
-    Role.find()
+    let search = {}
+    if (req.query._search && req.query._column) {
+        let col = req.query._column
+        let src = req.query._search
+
+        search = {
+            [col]: {
+                "$regex": src,
+                "$options": 'i'
+            }
+        }
+    }
+    Role.find(search)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
@@ -265,20 +276,9 @@ Router.get('/role', (req, res) => {
                 })
             })
 
-            
-            let total = await Role.countDocuments()
-            if (req.query._search) {
-                let search = req.query._search
-                rolePermission = rolePermission.filter(filter => {
-                    if (filter.roleName.toLowerCase().includes(search.toLowerCase())) return filter
-                })
-
-                total = rolePermission.length
-            }
-
             return res.status(200).send({
                 data: rolePermission,
-                total,
+                total: await Role.find(search).countDocuments(),
                 success: true,
                 message: 'Fetched roles'
             })
@@ -392,29 +392,27 @@ Router.delete('/role', (req, res) => {
 Router.get('/logs', (req, res) => {
     let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0
     let sort = req.query._sort ? { [req.query._sort]: req.query._order } : { actionDate: 'ASC', actionTime: 'DESC' }
-    Log.find()
+    let search = {}
+    if (req.query._search && req.query._column) {
+        let col = req.query._column
+        let src = req.query._search
+
+        search = {
+            [col]: {
+                "$regex": src,
+                "$options": 'i'
+            }
+        }
+    }
+    Log.find(search)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
         if (result) {
-            let total = await Log.countDocuments()
-            if (req.query._search) {
-                let search = req.query._search
-                result = result.filter(filter => {
-                    if (filter.employeeName.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.actionValue.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.actionType.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.actionDate.toLowerCase().includes(search.toLowerCase())) return filter
-                    if (filter.actionTime.toLowerCase().includes(search.toLowerCase())) return filter
-                })
-
-                total = result.length
-            }
-
             return res.status(200).send({
                 data: result,
-                total,
+                total: await Log.find(search).countDocuments(),
                 success: true,
                 message: 'Fetched logs'
             })
