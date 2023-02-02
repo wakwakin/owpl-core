@@ -265,9 +265,20 @@ Router.get('/role', (req, res) => {
                 })
             })
 
+            
+            let total = await Role.countDocuments()
+            if (req.query._search) {
+                let search = req.query._search
+                rolePermission = rolePermission.filter(filter => {
+                    if (filter.roleName.toLowerCase().includes(search.toLowerCase())) return filter
+                })
+
+                total = rolePermission.length
+            }
+
             return res.status(200).send({
                 data: rolePermission,
-                total: await Role.countDocuments(),
+                total,
                 success: true,
                 message: 'Fetched roles'
             })
