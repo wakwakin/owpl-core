@@ -13,6 +13,8 @@ const { default: mongoose } = require("mongoose");
 
 Router.get("/member", (req, res) => {
   let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let limit = vars.DATA_LIMIT
+  if (req.query._limit == 'none') limit = 0
   let search = {};
   if (req.query._search && req.query._column) {
     let col = req.query._column;
@@ -33,8 +35,8 @@ Router.get("/member", (req, res) => {
     }
   }
   Member.find(search)
-    .limit(vars.DATA_LIMIT)
-    .skip(page * vars.DATA_LIMIT)
+    .limit(limit)
+    .skip(page * limit)
     .then(async (result) => {
       if (result) {
         return res.status(200).send({
@@ -725,10 +727,12 @@ Router.get("/center", (req, res) => {
       },
     };
   }
+  let limit = vars.DATA_LIMIT
+  if (req.query._limit == 'none') limit = 0
   Center.find(search)
-    .limit(vars.DATA_LIMIT)
+    .limit(limit)
     .sort(sort)
-    .skip(page * vars.DATA_LIMIT)
+    .skip(page * limit)
     .then(async (result) => {
       if (result) {
         return res.send({
