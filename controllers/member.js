@@ -24,6 +24,7 @@ Router.get('/member', (req, res) => {
                     if (filter.centerName.toLowerCase().includes(search.toLowerCase())) return filter
                     if (filter.cycles.toString().toLowerCase().includes(search.toLowerCase())) return filter
                     if (filter.balance.toString().toLowerCase().includes(search.toLowerCase())) return filter
+                    if (filter.lastPaymentDate.toString().toLowerCase().includes(search.toLowerCase())) return filter
                 })
 
                 total = result.length
