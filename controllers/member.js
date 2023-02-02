@@ -506,10 +506,21 @@ Router.get('/center', (req, res) => {
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
     .then(async (result) => {
+        let total = await Center.countDocuments()
+        if (req.query._search) {
+            let search = req.query._search
+            result = result.filter(filter => {
+                if (filter.centerName.toLowerCase().includes(search.toLowerCase())) return filter
+                if (filter.centerLeader.toLowerCase().includes(search.toLowerCase())) return filter
+            })
+
+            total = result.length
+        }
+
         if (result) {
             return res.send({
                 data: result,
-                total: await Center.find().countDocuments(),
+                total,
                 success: true,
                 message: 'Fetched centers'
             })
