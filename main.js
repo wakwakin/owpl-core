@@ -20,7 +20,7 @@ app.use(Member)
 
 mongoose.set('strictQuery', false)
 mongoose.connect(MONGODB).then(() => {
-    app.listen(process.env.PORT, () => {
+    app.listen(3333, () => {
         console.log('Connected')
     })
 })

@@ -6,7 +6,8 @@ const schema = new mongoose.Schema({
     actionValue: { type: String },
     actionType: { type: String },
     actionDate: { type: String },
-    actionTime: { type: String }
+    actionTime: { type: String },
+    timestamp: { type: String }
 })
 
 module.exports = mongoose.model('Log', schema)

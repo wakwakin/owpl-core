@@ -420,7 +420,7 @@ Router.get("/logs", (req, res) => {
   let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
   let sort = req.query._sort
     ? { [req.query._sort]: req.query._order }
-    : { actionDate: "ASC", actionTime: "DESC" };
+    : { timestamp: "DESC" };
   let search = {};
   if (req.query._search && req.query._column) {
     let col = req.query._column;
@@ -473,6 +473,7 @@ function createLogs(received) {
       second: "2-digit",
       hour12: true,
     }),
+    timestamp: Date.now()
   }).save();
 }
 
