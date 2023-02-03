@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const cors = require('cors')
 const app = express()
 
-const MONGODB = 'mongodb+srv://owpl:owpl-admin@owpl.zbx8the.mongodb.net/core?retryWrites=true&w=majority'
+const MONGODB = process.env.DB_URI
 
 // Controllers
 const Authentication = require('./controllers/authentication')
@@ -20,7 +20,7 @@ app.use(Member)
 
 mongoose.set('strictQuery', false)
 mongoose.connect(MONGODB).then(() => {
-    app.listen(3333, () => {
+    app.listen(process.env.PORT, () => {
         console.log('Connected')
     })
 })
