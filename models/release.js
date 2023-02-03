@@ -7,6 +7,8 @@ const schema = new mongoose.Schema({
     releaseAmount: { type: Number },
     releaseOutgoing: { type: Number },
     nextPaymentDate: { type: String },
+    processingFee: { type: Number },
+    miscellaneousFee: { type: Number },
     dailyPayment: { type: Number }
 })
 

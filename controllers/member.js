@@ -549,10 +549,34 @@ Router.delete("/saving", (req, res) => {
 
 Router.get("/release", (req, res) => {
   let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let data = {};
+  if (req.query.id) {
+    data = { memberId: req.query.id };
+    if (req.query._search && req.query._column) {
+      let col = req.query._column;
+      let src = req.query._search;
+      let options = 'i'
+
+      data = {
+        memberId: req.query.id,
+        [col]: {
+          $regex: src,
+          $options: options,
+        },
+      };
+
+      if (Release.schema.path(col) instanceof mongoose.Schema.Types.Number) {
+        data = {
+          memberId: req.query.id,
+          [col]: parseInt(src),
+        };
+      }
+    }
+  }
   let sort = req.query._sort
     ? { [req.query._sort]: req.query._order }
     : { releaseDate: "ASC" };
-  Release.find()
+  Release.find(data)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
@@ -560,7 +584,7 @@ Router.get("/release", (req, res) => {
       if (result) {
         return res.send({
           data: result,
-          total: await Release.find().countDocuments(),
+          total: await Release.find(data).countDocuments(),
           success: true,
           message: "Fetched releases",
         });
@@ -582,11 +606,22 @@ Router.post("/release", (req, res) => {
     {
       nextPaymentDate: req.body.nextPaymentDate,
       dailyPayment: req.body.dailyPayment,
+      releaseAmount: req.body.releaseAmount,
+      releaseDate: req.body.releaseDate,
+      releaseOutgoing: req.body.releaseOutgoing,
+      processingFee: req.body.processingFee,
+      miscellaneousFee: req.body.miscellaneousFee,
+      remainingBalance: req.body.remainingBalance,
     }
   ).then((result) => {
     let logValue = {
-      nextPaymentDate:
-        result.nextPaymentDate + " => " + req.body.nextPaymentDate,
+      releaseAmount: result.releaseAmount + " => " + req.body.releaseAmount,
+      releaseDate: result.releaseDate + " => " + req.body.releaseDate,
+      releaseOutgoing: result.releaseOutgoing + " => " + req.body.releaseOutgoing,
+      processingFee: result.processingFee + " => " + req.body.processingFee,
+      miscellaneousFee: result.miscellaneousFee + " => " + req.body.miscellaneousFee,
+      remainingBalance: result.remainingBalance + " => " + req.body.remainingBalance,
+      nextPaymentDate: result.nextPaymentDate + " => " + req.body.nextPaymentDate,
       dailyPayment: result.dailyPayment + " => " + req.body.dailyPayment,
     };
     if (result) {
@@ -628,11 +663,29 @@ Router.put("/release", (req, res) => {
         releaseOutgoing: req.body.releaseOutgoing,
         nextPaymentDate: req.body.nextPaymentDate,
         dailyPayment: req.body.dailyPayment,
+        processingFee: req.body.processingFee,
+        miscellaneousFee: req.body.miscellaneousFee,
       };
 
       const release = new Release(data);
 
       await release.save().then(() => {
+        let newReleaseAmount =
+              parseFloat(req.body.releaseOutgoing) * 0.2 +
+              parseFloat(req.body.releaseOutgoing)
+        console.log(newReleaseAmount)
+        Member.findOneAndUpdate(
+          {
+            _id: req.body.memberId
+          }, {
+            lastReleaseDate: req.body.releaseDate,
+            lastReleaseAmount: req.body.releaseOutgoing,
+            releaseAmount: req.body.releaseOutgoing,
+            balance: newReleaseAmount
+          }
+        ).then((update) => {
+          console.log(update)
+        })
         createLogs({
           employeeId: req.body.logEmployeeId,
           employeeName: req.body.logEmployeeName,
