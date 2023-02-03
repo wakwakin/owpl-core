@@ -34,6 +34,11 @@ Router.get("/member", (req, res) => {
       };
     }
   }
+  if (req.query._center) {
+    search = {
+      centerId: req.query._center
+    }
+  }
   Member.find(search)
     .limit(limit)
     .skip(page * limit)
@@ -726,6 +731,11 @@ Router.get("/center", (req, res) => {
         $options: "i",
       },
     };
+  }
+  if (req.query._center) {
+    search = {
+      _id: req.query._center
+    }
   }
   let limit = vars.DATA_LIMIT
   if (req.query._limit == 'none') limit = 0
