@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const cors = require('cors')
 const app = express()
 
-const MONGODB = process.env.DB_URI
+const MONGODB = 'mongodb+srv://owpl:owpl-admin@owpl.zbx8the.mongodb.net/core?retryWrites=true&w=majority'
 
 // Controllers
 const Authentication = require('./controllers/authentication')
