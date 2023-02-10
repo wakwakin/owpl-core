@@ -1005,6 +1005,7 @@ function createLogs(received) {
       second: "2-digit",
       hour12: true,
     }),
+    timestamp: Date.now()
   }).save();
 }
 
