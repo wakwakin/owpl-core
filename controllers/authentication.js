@@ -11,7 +11,7 @@ const Log = require("../models/user-log");
 const DTR = require('../models/dtr');
 
 Router.get('/dtr', (req, res) => {
-  DTR.find().then((result) => {
+  DTR.find().sort({ timestamp: "DESC" }).then((result) => {
     return res.send({
       data: result,
       success: true,
