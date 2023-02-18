@@ -8,6 +8,135 @@ const vars = require("../const");
 const Employee = require("../models/employee");
 const Role = require("../models/role");
 const Log = require("../models/user-log");
+const DTR = require('../models/dtr');
+
+Router.get('/dtr', (req, res) => {
+  DTR.find().then((result) => {
+    return res.send({
+      data: result,
+      success: true,
+      message: "Fetched employees DTR"
+    })
+  })
+})
+
+Router.post("/dtr/in", (req, res) => {
+  Employee.findOne({ username: req.body.username }).then((result) => {
+    if (result) {
+      return bcrypt
+        .compare(req.body.password, result.password)
+        .then((isPasswordMatch) => {
+          if (isPasswordMatch) {
+            let date = new Date();
+            createLogs({
+              employeeId: result._id,
+              employeeName: result.firstName + " " + result.lastName,
+              actionValue: 'TIME_IN',
+              actionType: "DTR_RECORD",
+              date,
+            });
+
+            let data = {
+              memberFirstName: result.firstName,
+              memberLastName: result.lastName,
+              date: date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate(),
+              timestamp: Date.now(),
+              timeIn: date.toLocaleString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+              }),
+              timeOut: ''
+            }
+            let dtr = new DTR(data)
+
+            dtr.save()
+
+            return res.send({
+              data: {
+                firstName: result.firstName,
+                lastName: result.lastName
+              },
+              success: true,
+              message: "Time in recorded"
+            })
+          }
+
+          return res.status(400).send({
+            data: {},
+            success: false,
+            message: "Password is wrong"
+          })
+        })
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Username does not exist"
+    })
+  })
+});
+
+Router.post("/dtr/out", (req, res) => {
+  Employee.findOne({ username: req.body.username }).then((result) => {
+    if (result) {
+      return bcrypt
+        .compare(req.body.password, result.password)
+        .then((isPasswordMatch) => {
+          if (isPasswordMatch) {
+            let date = new Date()
+            createLogs({
+              employeeId: result._id,
+              employeeName: result.firstName + " " + result.lastName,
+              actionValue: 'TIME_OUT',
+              actionType: "DTR_RECORD",
+              date,
+            });
+
+            let data = {
+              timeOut: date.toLocaleString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+              })
+            }
+
+            DTR.findOneAndUpdate({
+              memberFirstName: result.firstName,
+              memberLastName: result.lastName,
+              date: date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate()
+            }, data, { sort: { timestamp: "DESC" } }).then((out) => {
+              console.log(out)
+            })
+
+            return res.send({
+              data: {
+                firstName: result.firstName,
+                lastName: result.lastName
+              },
+              success: true,
+              message: "Time out recorded"
+            })
+          }
+
+          return res.status(400).send({
+            data: {},
+            success: false,
+            message: "Password is wrong"
+          })
+        })
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Username does not exist"
+    })
+  })
+});
 
 Router.post("/login", (req, res) => {
   Employee.findOne({ username: req.body.username }).then((result) => {
