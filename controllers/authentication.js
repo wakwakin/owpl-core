@@ -31,8 +31,8 @@ Router.post("/dtr/in", (req, res) => {
             createLogs({
               employeeId: result._id,
               employeeName: result.firstName + " " + result.lastName,
-              actionValue: 'TIME_IN',
-              actionType: "DTR_RECORD",
+              actionValue: '',
+              actionType: "DTR_TIME_IN",
               date,
             });
 
@@ -90,8 +90,8 @@ Router.post("/dtr/out", (req, res) => {
             createLogs({
               employeeId: result._id,
               employeeName: result.firstName + " " + result.lastName,
-              actionValue: 'TIME_OUT',
-              actionType: "DTR_RECORD",
+              actionValue: '',
+              actionType: "DTR_TIME_OUT",
               date,
             });
 
