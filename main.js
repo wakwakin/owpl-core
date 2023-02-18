@@ -18,9 +18,11 @@ app.use(express.urlencoded({ extended: false }))
 app.use(Authentication)
 app.use(Member)
 
+require('./services/import')
+
 mongoose.set('strictQuery', false)
 mongoose.connect(MONGODB).then(() => {
-    app.listen(process.env.PORT, () => {
+    app.listen(3000, () => {
         console.log('Connected')
     })
 })

@@ -39,8 +39,12 @@ Router.get("/member", (req, res) => {
       centerId: req.query._center
     }
   }
+  let sort = req.query._sort
+    ? { [req.query._sort]: req.query._order }
+    : { memberName: "ASC" };
   Member.find(search)
     .limit(limit)
+    .sort(sort)
     .skip(page * limit)
     .then(async (result) => {
       if (result) {
@@ -247,7 +251,7 @@ Router.get("/payment", (req, res) => {
   }
   let sort = req.query._sort
     ? { [req.query._sort]: req.query._order }
-    : { paymentDate: "ASC" };
+    : { paymentDate: "DESC" };
   Payment.find(data)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
@@ -750,7 +754,8 @@ Router.get("/center/fix", (req, res) => {
       let centerId = member.centerId;
       let memberId = member._id.toString();
       Center.find({ _id: centerId }).then((center) => {
-        let newCenterName = center[0].centerName;
+        let newCenterName = center.centerName;
+        console.log(newCenterName)
         if (newCenterName != centerName) {
           Member.findOneAndUpdate(
             { _id: memberId },
