@@ -21,12 +21,14 @@ file.map(async (data) => {
         })
     }
 
-    payments.push({
-        memberName: data.memberName,
-        paymentDate: data.paymentDate,
-        paymentAmount: data.paymentAmount,
-        balance: data.balance
-    })
+    if (data.paymentDate != "Invalid Date") {
+        payments.push({
+            memberName: data.memberName,
+            paymentDate: data.paymentDate,
+            paymentAmount: data.paymentAmount,
+            balance: data.balance
+        })
+    }
 
     return
 })
