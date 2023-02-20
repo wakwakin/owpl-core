@@ -998,13 +998,8 @@ function createLogs(received) {
     employeeName: received.employeeName,
     actionValue: received.actionValue,
     actionType: received.actionType,
-    actionDate:
-      received.date.getFullYear() +
-      "-" +
-      (received.date.getMonth() + 1) +
-      "-" +
-      received.date.getDate(),
-    actionTime: received.date.toLocaleString("en-US", {
+    actionDate: new Date(received.date).toLocaleDateString('en-US', { year: "numeric", month: "long", day: "numeric" }),
+    actionTime: new Date(received.date).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
