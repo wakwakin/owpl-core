@@ -8,30 +8,58 @@ let centers = []
 let members = []
 let payments = []
 
-file.map(async (data) => {
-    if (centers.indexOf(data.centerName) === -1 && data.centerName) {
-        centers.push(data.centerName)
-    }
+// Member.find().then((member) => {
+//     member.map((m) => {
+//         Member.findOneAndUpdate({
+//             _id: m._id.toString()
+//         }, {
+//             lastPaymentDate: ''
+//         }).then((cleanPayment) => {
+//             Payment.find({
+//                 memberId: m._id.toString()
+//             }).then((payment) => {
+//                 payment.sort((a, b) => {
+//                     return new Date(a.paymentDate).getTime() > new Date(b.paymentDate).getTime() ? -1 : 1
+//                 })
+//                 console.log(payment[0])
+//                 Member.findOneAndUpdate({
+//                     _id: m._id.toString()
+//                 }, {
+//                     balance: payment[0].balance,
+//                     lastPaymentAmount: payment[0].paymentAmount,
+//                     lastPaymentDate: payment[0].paymentDate
+//                 }).then((update) => {
+//                     console.log(update)
+//                 })
+//             })
+//         })
+//     })
+// })
 
-    if (members.map(m => m.memberName).indexOf(data.memberName) === -1 && data.memberName) {
-        members.push({
-            memberName: data.memberName,
-            centerName: data.centerName,
-            balance: data.balance
-        })
-    }
+// file.map(async (data) => {
+//     if (centers.indexOf(data.centerName) === -1 && data.centerName) {
+//         centers.push(data.centerName)
+//     }
 
-    if (data.paymentDate != "Invalid Date") {
-        payments.push({
-            memberName: data.memberName,
-            paymentDate: data.paymentDate,
-            paymentAmount: data.paymentAmount,
-            balance: data.balance
-        })
-    }
+//     if (members.map(m => m.memberName).indexOf(data.memberName) === -1 && data.memberName) {
+//         members.push({
+//             memberName: data.memberName,
+//             centerName: data.centerName,
+//             balance: data.balance
+//         })
+//     }
 
-    return
-})
+//     if (data.paymentDate != "Invalid Date") {
+//         payments.push({
+//             memberName: data.memberName,
+//             paymentDate: data.paymentDate,
+//             paymentAmount: data.paymentAmount,
+//             balance: data.balance
+//         })
+//     }
+
+//     return
+// })
 
 // console.log("Center count: " + centers.length)
 // console.log("Member count: " + members.length)
