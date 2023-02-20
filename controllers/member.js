@@ -96,6 +96,7 @@ Router.post("/member", (req, res) => {
       cycles: req.body.cycles,
       centerId: req.body.centerId,
       centerName: req.body.centerName,
+      balance: req.body.balance
     };
   }
   Member.findOneAndUpdate(
