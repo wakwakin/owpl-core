@@ -755,13 +755,12 @@ Router.get("/center/fix", (req, res) => {
       let centerId = member.centerId;
       let memberId = member._id.toString();
       Center.find({ _id: centerId }).then((center) => {
-        let newCenterName = center.centerName;
-        console.log(newCenterName)
+        let newCenterName = center[0].centerName;
         if (newCenterName != centerName) {
           Member.findOneAndUpdate(
             { _id: memberId },
             { centerName: newCenterName }
-          ).then((result) => data.push(result));
+          ).then((result) => console.log(result));
         }
       });
     });
