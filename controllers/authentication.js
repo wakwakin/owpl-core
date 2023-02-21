@@ -8,19 +8,74 @@ const vars = require("../const");
 const Employee = require("../models/employee");
 const Role = require("../models/role");
 const Log = require("../models/user-log");
-const DTR = require('../models/dtr');
+const DTR = require("../models/dtr");
 
-Router.get('/dtr', (req, res) => {
-  DTR.find().sort({ timestamp: "DESC" }).then((result) => {
-    return res.send({
-      data: result,
-      success: true,
-      message: "Fetched employees DTR"
-    })
-  })
-})
+Router.get("/dtr", (req, res) => {
+  DTR.find()
+    .sort({ timestamp: "DESC" })
+    .then((result) => {
+      return res.send({
+        data: result,
+        success: true,
+        message: "Fetched employees DTR",
+      });
+    });
+});
 
-Router.post("/dtr/in", (req, res) => {
+Router.get("/dtr/in", (req, res) => {
+  console.log(req.query)
+  Employee.findOne({ _id: req.query._id }).then((result) => {
+    if (result) {
+      let date = new Date();
+      createLogs({
+        employeeId: result._id,
+        employeeName: result.firstName + " " + result.lastName,
+        actionValue: "",
+        actionType: "DTR_TIME_IN",
+        date,
+      });
+
+      let data = {
+        memberFirstName: result.firstName,
+        memberLastName: result.lastName,
+        date:
+          date.getFullYear() +
+          "-" +
+          (date.getMonth() + 1) +
+          "-" +
+          date.getDate(),
+        timestamp: Date.now(),
+        timeIn: date.toLocaleString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: true,
+        }),
+        timeOut: "",
+      };
+      let dtr = new DTR(data);
+
+      dtr.save();
+
+      return res.send({
+        data: {
+          firstName: result.firstName,
+          lastName: result.lastName,
+        },
+        success: true,
+        message: "Time in recorded",
+      });
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "Username does not exist",
+    });
+  });
+});
+
+Router.post("/dtr/out", (req, res) => {
   Employee.findOne({ username: req.body.username }).then((result) => {
     if (result) {
       return bcrypt
@@ -31,66 +86,7 @@ Router.post("/dtr/in", (req, res) => {
             createLogs({
               employeeId: result._id,
               employeeName: result.firstName + " " + result.lastName,
-              actionValue: '',
-              actionType: "DTR_TIME_IN",
-              date,
-            });
-
-            let data = {
-              memberFirstName: result.firstName,
-              memberLastName: result.lastName,
-              date: date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate(),
-              timestamp: Date.now(),
-              timeIn: date.toLocaleString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: true,
-              }),
-              timeOut: ''
-            }
-            let dtr = new DTR(data)
-
-            dtr.save()
-
-            return res.send({
-              data: {
-                firstName: result.firstName,
-                lastName: result.lastName
-              },
-              success: true,
-              message: "Time in recorded"
-            })
-          }
-
-          return res.status(400).send({
-            data: {},
-            success: false,
-            message: "Password is wrong"
-          })
-        })
-    }
-
-    return res.status(400).send({
-      data: {},
-      success: false,
-      message: "Username does not exist"
-    })
-  })
-});
-
-Router.post("/dtr/out", (req, res) => {
-  Employee.findOne({ username: req.body.username }).then((result) => {
-    if (result) {
-      return bcrypt
-        .compare(req.body.password, result.password)
-        .then((isPasswordMatch) => {
-          if (isPasswordMatch) {
-            let date = new Date()
-            createLogs({
-              employeeId: result._id,
-              employeeName: result.firstName + " " + result.lastName,
-              actionValue: '',
+              actionValue: "",
               actionType: "DTR_TIME_OUT",
               date,
             });
@@ -101,41 +97,50 @@ Router.post("/dtr/out", (req, res) => {
                 minute: "2-digit",
                 second: "2-digit",
                 hour12: true,
-              })
-            }
+              }),
+            };
 
-            DTR.findOneAndUpdate({
-              memberFirstName: result.firstName,
-              memberLastName: result.lastName,
-              date: date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate()
-            }, data, { sort: { timestamp: "DESC" } }).then((out) => {
-              console.log(out)
-            })
+            DTR.findOneAndUpdate(
+              {
+                memberFirstName: result.firstName,
+                memberLastName: result.lastName,
+                date:
+                  date.getFullYear() +
+                  "-" +
+                  (date.getMonth() + 1) +
+                  "-" +
+                  date.getDate(),
+              },
+              data,
+              { sort: { timestamp: "DESC" } }
+            ).then((out) => {
+              console.log(out);
+            });
 
             return res.send({
               data: {
                 firstName: result.firstName,
-                lastName: result.lastName
+                lastName: result.lastName,
               },
               success: true,
-              message: "Time out recorded"
-            })
+              message: "Time out recorded",
+            });
           }
 
           return res.status(400).send({
             data: {},
             success: false,
-            message: "Password is wrong"
-          })
-        })
+            message: "Password is wrong",
+          });
+        });
     }
 
     return res.status(400).send({
       data: {},
       success: false,
-      message: "Username does not exist"
-    })
-  })
+      message: "Username does not exist",
+    });
+  });
 });
 
 Router.post("/login", (req, res) => {
@@ -162,7 +167,7 @@ Router.post("/login", (req, res) => {
               createLogs({
                 employeeId: result._id,
                 employeeName: result.firstName + " " + result.lastName,
-                actionValue: '',
+                actionValue: "",
                 actionType: "LOGGED_IN",
                 date: new Date(),
               });
@@ -198,7 +203,7 @@ Router.post("/logout", (req, res) => {
   createLogs({
     employeeId: req.body.logEmployeeId,
     employeeName: req.body.logEmployeeName,
-    actionValue: '',
+    actionValue: "",
     actionType: "LOGGED_OUT",
     date: new Date(),
   });
@@ -590,14 +595,18 @@ function createLogs(received) {
     employeeName: received.employeeName,
     actionValue: received.actionValue,
     actionType: received.actionType,
-    actionDate: new Date(received.date).toLocaleDateString('en-US', { year: "numeric", month: "long", day: "numeric" }),
+    actionDate: new Date(received.date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
     actionTime: new Date(received.date).toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
       hour12: true,
     }),
-    timestamp: Date.now()
+    timestamp: Date.now(),
   }).save();
 }
 
