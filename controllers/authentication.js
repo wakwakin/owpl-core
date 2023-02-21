@@ -28,21 +28,6 @@ Router.get('/dtr/employee', (req, res) => {
   })
 })
 
-Router.get('/dtr/employee/in/success', (req, res) => {
-})
-
-Router.get('/dtr/employee/in/error', (req, res) => {
-  return res.render('../dtr-timein-error', {
-    data: dtr,
-    success: false,
-    message: 'Already timed in'
-  })
-})
-
-Router.get('/dtr/employee/out/success', (req, res) => {
-
-})
-
 Router.get("/dtr/in", (req, res) => {
   Employee.findOne({ _id: req.query._id }).then((result) => {
     if (result) {
