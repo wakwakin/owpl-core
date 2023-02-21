@@ -23,17 +23,9 @@ Router.get("/dtr", (req, res) => {
 });
 
 Router.get("/dtr/in", (req, res) => {
-  console.log(req.query);
   Employee.findOne({ _id: req.query._id }).then((result) => {
     if (result) {
       let date = new Date();
-      createLogs({
-        employeeId: result._id,
-        employeeName: result.firstName + " " + result.lastName,
-        actionValue: "",
-        actionType: "DTR_TIME_IN",
-        date,
-      });
 
       DTR.find({
         memberFirstName: result.firstName,
@@ -46,12 +38,19 @@ Router.get("/dtr/in", (req, res) => {
           date.getDate(),
       }).then((dtr) => {
         if (dtr) {
-          return res.status(400).send({
-            data: {},
+          return res.render('../dtr-timein-error', {
+            data: dtr,
             success: false,
-            message: "Already timed in"
+            message: 'Already timed in'
           })
         }
+        createLogs({
+          employeeId: result._id,
+          employeeName: result.firstName + " " + result.lastName,
+          actionValue: "",
+          actionType: "DTR_TIME_IN",
+          date,
+        });
 
         let data = {
           memberFirstName: result.firstName,
@@ -71,31 +70,22 @@ Router.get("/dtr/in", (req, res) => {
           }),
           timeOut: "",
         };
-        let dtr = new DTR(data);
+        let dtrSave = new DTR(data);
   
-        dtr.save();
+        dtrSave.save();
   
-        return res.send({
-          data: {
-            firstName: result.firstName,
-            lastName: result.lastName,
-          },
+        return res.render('../dtr-timein-success', {
+          data,
           success: true,
-          message: "Time in recorded",
-        });
+          message: ''
+        })
       })
     }
-
-    return res.status(400).send({
-      data: {},
-      success: false,
-      message: "ID does not exist",
-    });
   });
 });
 
-Router.post("/dtr/out", (req, res) => {
-  Employee.findOne({ _id: req.body._id }).then((result) => {
+Router.get("/dtr/out", (req, res) => {
+  Employee.findOne({ _id: req.query._id }).then((result) => {
     if (result) {
       let date = new Date();
       createLogs({
@@ -132,14 +122,11 @@ Router.post("/dtr/out", (req, res) => {
         console.log(out);
       });
 
-      return res.send({
-        data: {
-          firstName: result.firstName,
-          lastName: result.lastName,
-        },
+      return res.render('../dtr-timeout-success', {
+        data,
         success: true,
-        message: "Time out recorded",
-      });
+        message: ''
+      })
     }
 
     return res.status(400).send({

@@ -9,6 +9,7 @@ const MONGODB = 'mongodb+srv://owpl:owpl-admin@owpl.zbx8the.mongodb.net/core?ret
 const Authentication = require('./controllers/authentication')
 const Member = require('./controllers/member')
 
+app.set('view engine', 'ejs')
 app.use(cors({
     origin: '*'
 }))
