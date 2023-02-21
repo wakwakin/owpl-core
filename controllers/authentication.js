@@ -23,7 +23,7 @@ Router.get("/dtr", (req, res) => {
 });
 
 Router.get("/dtr/in", (req, res) => {
-  console.log(req.query)
+  console.log(req.query);
   Employee.findOne({ _id: req.query._id }).then((result) => {
     if (result) {
       let date = new Date();
@@ -35,7 +35,7 @@ Router.get("/dtr/in", (req, res) => {
         date,
       });
 
-      let data = {
+      DTR.find({
         memberFirstName: result.firstName,
         memberLastName: result.lastName,
         date:
@@ -44,18 +44,93 @@ Router.get("/dtr/in", (req, res) => {
           (date.getMonth() + 1) +
           "-" +
           date.getDate(),
-        timestamp: Date.now(),
-        timeIn: date.toLocaleString("en-US", {
+      }).then((dtr) => {
+        if (dtr) {
+          return res.status(400).send({
+            data: {},
+            success: false,
+            message: "Already timed in"
+          })
+        }
+
+        let data = {
+          memberFirstName: result.firstName,
+          memberLastName: result.lastName,
+          date:
+            date.getFullYear() +
+            "-" +
+            (date.getMonth() + 1) +
+            "-" +
+            date.getDate(),
+          timestamp: Date.now(),
+          timeIn: date.toLocaleString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: true,
+          }),
+          timeOut: "",
+        };
+        let dtr = new DTR(data);
+  
+        dtr.save();
+  
+        return res.send({
+          data: {
+            firstName: result.firstName,
+            lastName: result.lastName,
+          },
+          success: true,
+          message: "Time in recorded",
+        });
+      })
+    }
+
+    return res.status(400).send({
+      data: {},
+      success: false,
+      message: "ID does not exist",
+    });
+  });
+});
+
+Router.post("/dtr/out", (req, res) => {
+  Employee.findOne({ _id: req.body._id }).then((result) => {
+    if (result) {
+      let date = new Date();
+      createLogs({
+        employeeId: result._id,
+        employeeName: result.firstName + " " + result.lastName,
+        actionValue: "",
+        actionType: "DTR_TIME_OUT",
+        date,
+      });
+
+      let data = {
+        timeOut: date.toLocaleString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
           hour12: true,
         }),
-        timeOut: "",
       };
-      let dtr = new DTR(data);
 
-      dtr.save();
+      DTR.findOneAndUpdate(
+        {
+          memberFirstName: result.firstName,
+          memberLastName: result.lastName,
+          date:
+            date.getFullYear() +
+            "-" +
+            (date.getMonth() + 1) +
+            "-" +
+            date.getDate(),
+        },
+        data,
+        { sort: { timestamp: "DESC" } }
+      ).then((out) => {
+        console.log(out);
+      });
 
       return res.send({
         data: {
@@ -63,82 +138,14 @@ Router.get("/dtr/in", (req, res) => {
           lastName: result.lastName,
         },
         success: true,
-        message: "Time in recorded",
+        message: "Time out recorded",
       });
     }
 
     return res.status(400).send({
       data: {},
       success: false,
-      message: "Username does not exist",
-    });
-  });
-});
-
-Router.post("/dtr/out", (req, res) => {
-  Employee.findOne({ username: req.body.username }).then((result) => {
-    if (result) {
-      return bcrypt
-        .compare(req.body.password, result.password)
-        .then((isPasswordMatch) => {
-          if (isPasswordMatch) {
-            let date = new Date();
-            createLogs({
-              employeeId: result._id,
-              employeeName: result.firstName + " " + result.lastName,
-              actionValue: "",
-              actionType: "DTR_TIME_OUT",
-              date,
-            });
-
-            let data = {
-              timeOut: date.toLocaleString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: true,
-              }),
-            };
-
-            DTR.findOneAndUpdate(
-              {
-                memberFirstName: result.firstName,
-                memberLastName: result.lastName,
-                date:
-                  date.getFullYear() +
-                  "-" +
-                  (date.getMonth() + 1) +
-                  "-" +
-                  date.getDate(),
-              },
-              data,
-              { sort: { timestamp: "DESC" } }
-            ).then((out) => {
-              console.log(out);
-            });
-
-            return res.send({
-              data: {
-                firstName: result.firstName,
-                lastName: result.lastName,
-              },
-              success: true,
-              message: "Time out recorded",
-            });
-          }
-
-          return res.status(400).send({
-            data: {},
-            success: false,
-            message: "Password is wrong",
-          });
-        });
-    }
-
-    return res.status(400).send({
-      data: {},
-      success: false,
-      message: "Username does not exist",
+      message: "ID does not exist",
     });
   });
 });
