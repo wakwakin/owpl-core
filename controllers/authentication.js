@@ -43,7 +43,7 @@ Router.get("/dtr/in", (req, res) => {
           "-" +
           date.getDate(),
       }).then((dtr) => {
-        if (dtr) {
+        if (dtr.length > 0) {
           return res.render('../dtr-timein-error', {
             data: dtr,
             success: false,
