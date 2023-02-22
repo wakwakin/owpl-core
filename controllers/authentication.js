@@ -27,7 +27,7 @@ Router.get("/dtr", (req, res) => {
       },
     };
   }
-  DTR.find()
+  DTR.find(search)
     .limit(vars.DATA_LIMIT)
     .sort(sort)
     .skip(page * vars.DATA_LIMIT)
