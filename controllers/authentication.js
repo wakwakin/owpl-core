@@ -11,11 +11,30 @@ const Log = require("../models/user-log");
 const DTR = require("../models/dtr");
 
 Router.get("/dtr", (req, res) => {
+  let page = req.query._page >= 1 ? parseInt(req.query._page) - 1 : 0;
+  let sort = req.query._sort
+    ? { [req.query._sort]: req.query._order }
+    : { timestamp: "DESC" };
+  let search = {};
+  if (req.query._search && req.query._column) {
+    let col = req.query._column;
+    let src = req.query._search;
+
+    search = {
+      [col]: {
+        $regex: src,
+        $options: "i",
+      },
+    };
+  }
   DTR.find()
-    .sort({ timestamp: "DESC" })
-    .then((result) => {
+    .limit(vars.DATA_LIMIT)
+    .sort(sort)
+    .skip(page * vars.DATA_LIMIT)
+    .then(async (result) => {
       return res.send({
         data: result,
+        total: await DTR.find(search).countDocuments(),
         success: true,
         message: "Fetched employees DTR",
       });
